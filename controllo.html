@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Automazione Brogliaccio Magazzino (Stampa A3)</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 45%, #43e97b 100%);
+            min-height: 100vh;
+            padding: 40px 20px;
+            color: #2C3E50;
+            margin: 0;
+        }
+        .container {
+            max-width: 680px;
+            margin: 0 auto;
+            background: white;
+            padding: 35px;
+            border-radius: 16px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        h2 {
+            text-align: center;
+            margin-bottom: 5px;
+            font-size: 28px;
+            background: linear-gradient(90deg, #ff6a00, #ee0979);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+        p.subtitle { text-align: center; color: #7f8c8d; margin-bottom: 25px; font-size: 15px; }
+        .features {
+            background: #fff4e0;
+            border-left: 5px solid #ff9800;
+            padding: 14px 20px;
+            margin-bottom: 25px;
+            font-size: 14px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        .features ul { margin: 8px 0 0 0; padding: 0; list-style-position: inside; text-align: center; }
+        .features li { margin-bottom: 4px; }
+        .file-upload {
+            border: 3px dashed #00b4d8;
+            padding: 30px;
+            text-align: center;
+            border-radius: 12px;
+            background: #f0fbff;
+            margin-bottom: 20px;
+        }
+        input[type="file"] { margin-top: 15px; font-size: 15px; }
+        button {
+            background: linear-gradient(90deg, #ff6a00, #ee0979);
+            color: white;
+            border: none;
+            padding: 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 18px;
+            font-weight: bold;
+            width: 100%;
+            transition: 0.3s;
+            letter-spacing: 0.5px;
+        }
+        button:hover { filter: brightness(1.1); transform: translateY(-2px); }
+        button:disabled { background: #bdc3c7; cursor: not-allowed; transform: none; }
+        #status { margin-top: 20px; text-align: center; font-weight: bold; font-size: 16px; }
+        .success { color: #27ae60; }
+        .error { color: #e74c3c; }
+    </style>
+    <!-- Libreria per manipolare Excel direttamente nel browser -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js"></script>
+</head>
+<body>
+
+<div class="container">
+    <h2>📦 Controllo Magazzino Automatizzato</h2>
+    <p class="subtitle">Ottimizzato per Stampa A3 ad Alta Leggibilità</p>
+
+    <div class="features">
+        <strong>⚡ Automazioni attive:</strong>
+        <ul>
+            <li><strong>Novità:</strong> Riconoscimento intelligente del formato (non cancella più colonne o righe se il file è già pulito!)</li>
+            <li><strong>Novità:</strong> Segno <strong>+</strong> visibile in automatico per le differenze positive in colonna H</li>
+            <li>Elabora automaticamente l'<strong>ULTIMA PAGINA</strong> dell'Excel</li>
+            <li>Controllo intelligente tra <em>Contate</em> e <em>Quantità Video</em> (Verde/Rosso/Bianco/Grigio)</li>
+            <li>Preserva i numeri manuali su Contate, rimuove doppioni, righe alte (30px) e bordi completi</li>
+        </ul>
+    </div>
+
+    <div class="file-upload">
+        <label for="excelFile"><strong>Seleziona il file Excel:</strong></label><br>
+        <input type="file" id="excelFile" accept=".xlsx, .xls">
+    </div>
+
+    <button id="processBtn" onclick="elaboraFile()" disabled>Elabora e Scarica Report</button>
+    <div id="status"></div>
+</div>
+
+<script>
+    const fileInput = document.getElementById('excelFile');
+    const processBtn = document.getElementById('processBtn');
+    const statusDiv = document.getElementById('status');
+
+    fileInput.addEventListener('change', () => {
+        processBtn.disabled = !fileInput.value;
+        statusDiv.innerHTML = "";
+    });
+
+    async function elaboraFile() {
+        try {
+            statusDiv.innerHTML = "Analisi struttura file, elaborazione e calcolo in corso... ⏳";
+            statusDiv.className = "";
+            processBtn.disabled = true;
+
+            const file = fileInput.files[0];
+            const arrayBuffer = await file.arrayBuffer();
+            
+            const workbookIn = new ExcelJS.Workbook();
+            await workbookIn.xlsx.load(arrayBuffer);
+            
+            // SELEZIONE ESCLUSIVA DELL'ULTIMA PAGINA:
+            const worksheetIn = workbookIn.worksheets[workbookIn.worksheets.length - 1];
+
+            const workbookOut = new ExcelJS.Workbook();
+            const worksheetOut = workbookOut.addWorksheet('Magazzino A3');
+
+            const bordoTabella = {
+                top: { style: 'thin', color: { argb: 'FF808080' } },
+                left: { style: 'thin', color: { argb: 'FF808080' } },
+                bottom: { style: 'thin', color: { argb: 'FF808080' } },
+                right: { style: 'thin', color: { argb: 'FF808080' } }
+            };
+
+            const headers = ["Codice articolo", "Descrizione", "Quantità ERP", "Cliente", "Quantità video", "Contate", "Note", "Differenza"];
+            const headerRow = worksheetOut.addRow(headers);
+            
+            headerRow.height = 35;
+            for (let i = 1; i <= 8; i++) {
+                const cell = headerRow.getCell(i);
+                cell.font = { name: 'Segoe UI', size: 14, bold: true, color: { argb: 'FFFFFFFF' } };
+                cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFEE0979' } };
+                cell.alignment = { horizontal: 'center', vertical: 'middle', wrapText: false };
+                cell.border = bordoTabella;
+            }
+
+            // --- 1. ANALISI INTELLIGENTE STRUTTURA DEL FILE (La tua intuizione!) ---
+            const valA1 = (worksheetIn.getCell(1, 1).value || "").toString().trim().toLowerCase();
+            const valB1 = (worksheetIn.getCell(1, 2).value || "").toString().trim();
+            
+            // Se B1 è vuoto o A1 contiene "brogliaccio", è un file grezzo con riga di titolo da saltare!
+            const hasTitleRow = valA1.includes("brogliaccio") || valB1 === "";
+            const headerRowIdx = hasTitleRow ? 2 : 1;
+            const startRow = hasTitleRow ? 3 : 2;
+
+            // Controlliamo se la colonna 3 è la vecchia "UM" o "NR", o se C1/C2 è vuoto nel grezzo
+            const headerCol3 = (worksheetIn.getCell(headerRowIdx, 3).value || "").toString().trim().toUpperCase();
+            const hasUmCol = headerCol3 === "UM" || headerCol3 === "NR" || (hasTitleRow && (worksheetIn.getCell(1, 3).value || "").toString().trim() === "");
+
+            // Mappiamo dinamicamente le colonne in base a come è fatto il file
+            const colMap = {
+                codice: 1,
+                desc: 2,
+                quantita: hasUmCol ? 4 : 3,
+                cliente: hasUmCol ? 5 : 4,
+                qVideo: hasUmCol ? 6 : 5,
+                contate: hasUmCol ? 7 : 6,
+                note: hasUmCol ? 8 : 7,
+                diff: hasUmCol ? 9 : 8 // (se il file elaborato aveva già la differenza)
+            };
+
+            // --- 2. RACCOLTA DATI E RIMOZIONE DOPPIONI ---
+            let rowsData = [];
+            const seenDuplicates = new Set();
+
+            worksheetIn.eachRow((row, rowNumber) => {
+                if (rowNumber < startRow) return;
+
+                const codice = (row.getCell(colMap.codice).value || "").toString().trim();
+                const desc = (row.getCell(colMap.desc).value || "").toString().trim();
+                if (!codice && !desc) return; 
+
+                const uniqueKey = `${codice.toUpperCase()}_${desc.toUpperCase()}`;
+                if (seenDuplicates.has(uniqueKey)) {
+                    return; 
+                }
+                seenDuplicates.add(uniqueKey);
+
+                const quantita = row.getCell(colMap.quantita).value || 0;
+                const cliente = (row.getCell(colMap.cliente).value || "").toString();
+                const qVideo = row.getCell(colMap.qVideo).value || 0;
+                
+                // Leggiamo la colonna Contate se esiste già un numero
+                let contateVal = row.getCell(colMap.contate).value;
+                if (contateVal && typeof contateVal === 'object' && contateVal.result !== undefined) {
+                    contateVal = contateVal.result;
+                }
+
+                // Leggiamo Note
+                const noteRaw = row.getCell(colMap.note).value;
+                const note = noteRaw ? noteRaw.toString().trim() : "";
+
+                const qVidNum = parseFloat(qVideo.toString().replace(',', '.')) || 0;
+                let contate = "";
+                let diff = "";
+
+                // STEP 1: Controlliamo se c'è GIÀ un numero inserito direttamente nella colonna Contate
+                if (contateVal !== null && contateVal !== undefined && contateVal.toString().trim() !== "") {
+                    const parsed = parseFloat(contateVal.toString().replace(',', '.'));
+                    if (!isNaN(parsed)) {
+                        contate = parsed;
+                    }
+                }
+
+                // STEP 2: Se la colonna Contate è vuota, ma ci sono numeri nelle Note, calcoliamo la somma
+                if (contate === "" && note !== "") {
+                    const nums = note.match(/\b\d+\b/g);
+                    if (nums) {
+                        contate = nums.reduce((acc, val) => acc + parseInt(val, 10), 0);
+                    }
+                }
+
+                // STEP 3: Se abbiamo una quantità contata (manuale O da Note), calcoliamo lo scostamento
+                if (contate !== "") {
+                    diff = contate - qVidNum;
+                }
+
+                rowsData.push({
+                    codice, desc, quantita, cliente, qVideo: qVidNum, contate, note, diff
+                });
+            });
+
+            // --- 3. ORDINAMENTO ALFABETICO (Colonna B - Descrizione) ---
+            rowsData.sort((a, b) => a.desc.localeCompare(b.desc, 'it', { sensitivity: 'base' }));
+
+            // --- 4. SCRITTURA NEL NUOVO FOGLIO ---
+            rowsData.forEach(item => {
+                const newRow = worksheetOut.addRow([
+                    item.codice, item.desc, item.quantita, item.cliente, 
+                    item.qVideo, item.contate, item.note, item.diff
+                ]);
+
+                newRow.height = 30;
+
+                for (let colIdx = 1; colIdx <= 8; colIdx++) {
+                    const c = newRow.getCell(colIdx);
+                    
+                    c.font = { name: 'Segoe UI', size: 13, color: { argb: 'FF2C3E50' } };
+                    c.alignment = { horizontal: 'center', vertical: 'middle', wrapText: false };
+                    c.border = bordoTabella; 
+                    
+                    // GESTIONE COLORI INTELLIGENTE:
+                    if (item.diff !== "" && item.diff < 0) {
+                        // ROSSO ACCESO per ammanco (Contate < Quantità Video)
+                        c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFF7675' } };
+                        c.font = { name: 'Segoe UI', size: 13, color: { argb: 'FFFFFFFF' }, bold: true };
+                    } else if (item.diff !== "" && item.diff > 0) {
+                        // VERDE ACCESO per eccedenza (Contate > Quantità Video)
+                        c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF55EFC4' } };
+                    } else if (item.qVideo <= 0 && (item.diff === "" || item.diff === 0)) {
+                        // GRIGIO per giacenza a zero a gestionale (non ancora verificata o confermata a 0)
+                        c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFBFC9CA' } };
+                    }
+                }
+
+                newRow.getCell(1).font = Object.assign({}, newRow.getCell(1).font, { size: 13, bold: true });
+                if (item.contate !== "") {
+                    newRow.getCell(6).font = Object.assign({}, newRow.getCell(6).font, { size: 14, bold: true });
+                }
+                
+                // FORMATTAZIONE DEL SEGNO PIÙ (+) IN COLONNA H (DIFFERENZA):
+                if (item.diff !== "") {
+                    const cDiff = newRow.getCell(8);
+                    cDiff.font = Object.assign({}, cDiff.font, { size: 14, bold: true });
+                    // Questo formato nativo Excel forza il segno + sui positivi, es. "+3", lasciando - sui negativi e 0 normale!
+                    cDiff.numFmt = '+#,##0;-#,##0;0';
+                }
+            });
+
+            // --- 5. CALCOLO DINAMICO LARGHEZZA COLONNE ---
+            worksheetOut.columns.forEach((column) => {
+                let maxLen = 0;
+                column.eachCell({ includeEmpty: false }, (cell) => {
+                    const cellValueStr = cell.value !== null && cell.value !== undefined ? cell.value.toString() : "";
+                    if (cellValueStr.length > maxLen) {
+                        maxLen = cellValueStr.length;
+                    }
+                });
+                column.width = Math.max(Math.ceil(maxLen * 1.3) + 3, 15);
+            });
+
+            worksheetOut.views = [{ state: 'frozen', xSplit: 0, ySplit: 1 }];
+
+            const buffer = await workbookOut.xlsx.writeBuffer();
+            const blob = new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+            const url = window.URL.createObjectURL(blob);
+            
+            const dataOggi = new Date().toLocaleDateString('it-IT').replace(/\//g, '-');
+            const nomeFile = `Magazzino_Ordinato_A3_${dataOggi}.xlsx`;
+
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = nomeFile;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+
+            statusDiv.innerHTML = `Report generato con successo dalla scheda "${worksheetIn.name}"! File scaricato come "${nomeFile}". ✔️`;
+            statusDiv.className = "success";
+            
+        } catch (error) {
+            console.error(error);
+            statusDiv.innerHTML = "Errore durante l'elaborazione. Verifica il file caricato.";
+            statusDiv.className = "error";
+        } finally {
+            processBtn.disabled = false;
+        }
+    }
+</script>
+
+</body>
+</html>
