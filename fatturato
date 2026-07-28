@@ -1,28 +1,27 @@
-HTML
 <!DOCTYPE html>
 <html lang="it">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gestione Fatturato Giornaliero</title>
+    <title>Gestione Fatturato Giornaliero - Direzione</title>
     <style>
         :root {
-            --bg-color: #f4f6f9;
+            --bg-color: #f0f2f5;
             --card-bg: #ffffff;
-            --primary: #2563eb;
+            --primary: #1e3a8a; 
             --primary-hover: #1d4ed8;
             --success: #16a34a;
             --danger: #dc2626;
             --text-main: #1f2937;
-            --border-color: #e5e7eb;
-            --header-bg: #ef4444; /* Rosso come da foto WhatsApp */
+            --border-color: #cbd5e1;
+            --header-bg: #dc2626; 
         }
 
         * {
             box-sizing: border-box;
             margin: 0;
             padding: 0;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, Helvetica, Arial, sans-serif;
         }
 
         body {
@@ -32,147 +31,197 @@ HTML
         }
 
         .container {
-            max-width: 950px;
+            max-width: 1080px;
             margin: 0 auto;
             background: var(--card-bg);
             border-radius: 12px;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-            padding: 2rem;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.05);
+            padding: 2.5rem;
+            border: 1px solid #e2e8f0;
         }
 
         h1 {
-            font-size: 1.5rem;
+            font-size: 1.75rem;
+            font-weight: 700;
             margin-bottom: 1.5rem;
-            color: #111827;
-            border-bottom: 2px solid var(--border-color);
-            padding-bottom: 0.75rem;
+            color: #0f172a;
+            border-bottom: 2px solid #e2e8f0;
+            padding-bottom: 1rem;
             display: flex;
             justify-content: space-between;
             align-items: center;
         }
 
         .date-display {
-            font-size: 1rem;
-            font-weight: normal;
-            color: #6b7280;
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #475569;
+            background: #f1f5f9;
+            padding: 0.4rem 0.8rem;
+            border-radius: 6px;
         }
 
         .control-panel {
-            background-color: #f8fafc;
-            border: 1px solid var(--border-color);
-            border-radius: 8px;
-            padding: 1.25rem;
-            margin-bottom: 1.5rem;
+            background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+            border: 1px solid #cbd5e1;
+            border-radius: 10px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
             display: flex;
             align-items: center;
             justify-content: space-between;
             flex-wrap: wrap;
-            gap: 1rem;
+            gap: 1.5rem;
+            box-shadow: inset 0 2px 4px 0 rgba(0,0,0,0.02);
         }
 
         .control-group {
             display: flex;
             flex-direction: column;
-            gap: 0.35rem;
+            gap: 0.5rem;
         }
 
         .control-group label {
-            font-size: 0.85rem;
-            font-weight: 600;
-            color: #4b5563;
+            font-size: 0.9rem;
+            font-weight: 700;
+            color: #334155;
             text-transform: uppercase;
+            letter-spacing: 0.05em;
         }
 
         .control-group input {
-            padding: 0.6rem 0.8rem;
-            font-size: 1.1rem;
+            padding: 0.75rem 1rem;
+            font-size: 1.25rem;
             font-weight: bold;
-            border: 1px solid #cbd5e1;
-            border-radius: 6px;
-            width: 220px;
+            border: 2px solid #94a3b8;
+            border-radius: 8px;
+            width: 250px;
             text-align: right;
             color: #0f172a;
+            background: #ffffff;
+            transition: all 0.2s;
         }
 
         .control-group input:focus {
             outline: none;
             border-color: var(--primary);
-            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+            box-shadow: 0 0 0 4px rgba(30, 58, 138, 0.15);
         }
 
         .hint-text {
-            font-size: 0.8rem;
-            color: #64748b;
+            font-size: 0.85rem;
+            color: #475569;
+            line-height: 1.4;
+        }
+
+        .table-container {
+            overflow-x: auto;
+            margin-bottom: 2rem;
+            border-radius: 8px;
+            border: 2px solid #334155;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
         }
 
         table {
             width: 100%;
             border-collapse: collapse;
-            margin-bottom: 1.5rem;
             background: #fff;
-            border: 1px solid #000;
         }
 
         th, td {
-            border: 1px solid #000;
-            padding: 0.75rem 1rem;
-            text-align: center;
-            font-size: 0.95rem;
+            border: 1px solid #94a3b8;
+            padding: 0.85rem 1rem;
+            font-size: 0.98rem;
         }
 
         th {
-            background-color: #f3f4f6;
-            font-weight: 700;
+            background-color: #f8fafc;
+            font-weight: 800;
             text-transform: uppercase;
             letter-spacing: 0.05em;
+            color: #1e293b;
+            border-bottom: 2px solid #334155;
+            text-align: right;
         }
 
         th.col-fatturato {
             background-color: var(--header-bg);
             color: white;
-            width: 18%;
+            width: 20%;
+            text-align: left;
+            padding-left: 1.25rem;
+        }
+
+        tr.row-italia {
+            background-color: #f0fdf4;
+            border-bottom: 2px solid #334155;
+        }
+
+        tr.row-italia td.branch-name {
+            background-color: #dcfce7;
+            color: #14532d;
+            font-size: 1.05rem;
         }
 
         td.branch-name {
-            font-weight: 700;
-            background-color: #f0fdf4; /* Leggero verde sfondo come da foto */
-            color: #14532d;
+            font-weight: 800;
+            background-color: #f1f5f9;
+            color: #334155;
+            text-align: left;
+            padding-left: 1.25rem;
+            letter-spacing: 0.02em;
+        }
+
+        td {
+            text-align: right;
+            font-variant-numeric: tabular-nums;
         }
 
         input.cell-input {
             width: 100%;
             border: 1px solid transparent;
             background: transparent;
-            text-align: center;
-            font-size: 0.95rem;
-            font-weight: 600;
-            padding: 0.25rem;
+            text-align: right;
+            font-size: 1.02rem;
+            font-weight: 700;
+            padding: 0.35rem 0.5rem;
             border-radius: 4px;
+            font-variant-numeric: tabular-nums;
+            color: #0f172a;
         }
 
         input.cell-input:hover, input.cell-input:focus {
-            background: #f1f5f9;
-            border-color: #94a3b8;
+            background: #ffffff;
+            border-color: #64748b;
             outline: none;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
         }
 
         input.cell-input.editable-today {
-            background: #fffbeb;
-            border: 1px dashed #f59e0b;
+            background: #fef9c3;
+            border: 1px solid #eab308;
+            color: #854d0e;
+        }
+
+        input.cell-input.editable-year {
+            background: #f1f5f9;
+            border: 1px dashed #94a3b8;
+            color: #334155;
         }
 
         .val-positive {
             color: var(--success);
-            font-weight: bold;
+            font-weight: 800;
         }
 
         .val-negative {
             color: var(--danger);
-            font-weight: bold;
+            font-weight: 800;
         }
 
         .val-zero {
-            color: #6b7280;
+            color: #64748b;
+            font-weight: 600;
         }
 
         .actions {
@@ -180,61 +229,70 @@ HTML
             gap: 1rem;
             justify-content: flex-end;
             flex-wrap: wrap;
-            border-top: 1px solid var(--border-color);
-            padding-top: 1.25rem;
+            border-top: 1px solid #e2e8f0;
+            padding-top: 1.5rem;
         }
 
         button {
-            padding: 0.65rem 1.25rem;
-            font-size: 0.9rem;
-            font-weight: 600;
+            padding: 0.75rem 1.5rem;
+            font-size: 0.95rem;
+            font-weight: 700;
             border: none;
-            border-radius: 6px;
+            border-radius: 8px;
             cursor: pointer;
-            transition: all 0.15s ease;
+            transition: all 0.2s ease;
             display: flex;
             align-items: center;
-            gap: 0.5rem;
+            gap: 0.6rem;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+
+        button:active {
+            transform: translateY(1px);
         }
 
         .btn-primary {
-            background-color: var(--primary);
+            background-color: #2563eb;
             color: white;
         }
 
         .btn-primary:hover {
-            background-color: var(--primary-hover);
+            background-color: #1d4ed8;
+            box-shadow: 0 4px 6px rgba(37, 99, 235, 0.2);
         }
 
         .btn-success {
-            background-color: var(--success);
+            background-color: #16a34a;
             color: white;
         }
 
         .btn-success:hover {
             background-color: #15803d;
+            box-shadow: 0 4px 6px rgba(22, 163, 74, 0.2);
         }
 
         .btn-secondary {
-            background-color: #e2e8f0;
-            color: #334155;
+            background-color: #f1f5f9;
+            color: #475569;
+            border: 1px solid #cbd5e1;
         }
 
         .btn-secondary:hover {
-            background-color: #cbd5e1;
+            background-color: #e2e8f0;
+            color: #1e293b;
         }
 
         .legend {
-            font-size: 0.85rem;
-            color: #64748b;
-            margin-top: 1rem;
+            font-size: 0.9rem;
+            color: #475569;
+            margin-top: 1.5rem;
             background: #f8fafc;
-            padding: 0.75rem;
-            border-radius: 6px;
-            border-left: 4px solid #3b82f6;
+            padding: 1rem;
+            border-radius: 8px;
+            border-left: 4px solid var(--primary);
+            line-height: 1.5;
         }
 
-        /* Stile per copia nascosta */
         #email-table-container {
             position: absolute;
             left: -9999px;
@@ -246,56 +304,54 @@ HTML
 
 <div class="container">
     <h1>
-        <span>Fatturato Giornaliero</span>
+        <span>📊 Gestione Fatturato Giornaliero</span>
         <span class="date-display" id="current-date"></span>
     </h1>
 
-    <!-- Pannello Inserimento Veloce -->
     <div class="control-panel">
         <div class="control-group">
             <label for="totale-brogliaccio">Totale Netto Brogliaccio Oggi (€)</label>
             <input type="text" id="totale-brogliaccio" placeholder="Es. 109.771" oninput="calcolaItalia()">
-            <span class="hint-text">Inserisci il totale netto del giorno. L'Italia si calcola da sola!</span>
+            <span class="hint-text">💡 L'Italia viene calcolata per prima in automatico sottraendo gli esteri.</span>
         </div>
-        <div class="hint-text" style="max-width: 450px;">
-            <strong>Automazione attive:</strong><br>
-            • <em>Italia</em> = Totale Netto Brogliaccio - (Spagna + 2IG + Russia + Turchia).<br>
-            • Clicca sulle singole celle per rettificare manualmente i totali precedenti o i target.
+        <div class="hint-text" style="max-width: 520px;">
+            <strong>Automazioni & Migliorie v3:</strong><br>
+            • <strong>Colonna "Anno Scorso" visibile e modificabile</strong>: Digita i target quando vuoi.<br>
+            • <strong>No perdita di focus</strong>: Spostati comodamente tra le celle con il tasto Tab.<br>
+            • <strong>Parsing decimale di precisione</strong>: Gestisce correttamente sia il punto che la virgola.
         </div>
     </div>
 
-    <!-- Tabella Principale -->
-    <table id="main-table">
-        <thead>
-            <tr>
-                <th class="col-fatturato">Fatturato</th>
-                <th>Oggi</th>
-                <th>Totale</th>
-                <th>Confronto Anno Scorso</th>
-                <th style="display:none;">Anno Scorso Ref (Nascosto)</th>
-            </tr>
-        </thead>
-        <tbody id="table-body">
-            <!-- Riempiamo dinamicamente con JS per pulizia -->
-        </tbody>
-    </table>
+    <div class="table-container">
+        <table id="main-table">
+            <thead>
+                <tr>
+                    <th class="col-fatturato">Fatturato</th>
+                    <th>Oggi</th>
+                    <th>Totale Attuale</th>
+                    <th>Anno Scorso</th>
+                    <th>Confronto / Diff.</th>
+                </tr>
+            </thead>
+            <tbody id="table-body">
+            </tbody>
+        </table>
+    </div>
 
     <div class="actions">
-        <button class="btn-secondary" onclick="resetOggi()">Azzeramento "Oggi"</button>
-        <button class="btn-primary" onclick="copiaPerEmail()">📋 Copia Tabella per Email</button>
+        <button class="btn-secondary" onclick="resetOggi()">🔄 Azzera colonna "Oggi"</button>
+        <button class="btn-primary" onclick="copiaPerEmail()">📋 Copia Tabella Executive per Email</button>
         <button class="btn-success" onclick="chiudiGiornata()">💾 Chiudi Giornata e Salva</button>
     </div>
 
     <div class="legend">
-        <strong>Guida rapida:</strong> Inserisci il fatturato odierno di Turchia, Spagna, 2IG o Russia nelle rispettive celle gialle nella colonna "Oggi". Il valore di <strong>ITALIA</strong> si aggiorna in tempo reale. Quando hai finito, clicca <em>Copia Tabella per Email</em> per incollarla nel messaggio serale. Clicca <em>Chiudi Giornata e Salva</em> per memorizzare i dati per domani.
+        <strong>📌 Come presentare i dati ai titolari:</strong> Quando premi il pulsante blu <em>"Copia Tabella Executive per Email"</em>, viene generata una tabella formattata a regola d'arte per Gmail e Outlook: bordi nitidi, intestazione rossa, riga <strong>ITALIA</strong> evidenziata al primo posto e riga <strong>TOTALE GRUPPO</strong> in fondo.
     </div>
 </div>
 
-<!-- Contenitore invisibile per formattare la tabella pulita da inviare via mail -->
 <div id="email-table-container"></div>
 
 <script>
-    // Configurazione iniziale filiali (in ordine come da foto)
     const defaultBranches = [
         { id: 'ITALIA', name: 'ITALIA', oggi: 0, totalePrec: 1265315, annoScorso: 1256869 },
         { id: 'SPAGNA', name: 'SPAGNA', oggi: 0, totalePrec: 26214, annoScorso: 130214 },
@@ -306,38 +362,50 @@ HTML
 
     let branchesData = [];
 
-    // Formattatore numeri formato Italiano (es. 1.292.369)
     const formatter = new Intl.NumberFormat('it-IT', {
         maximumFractionDigits: 0
     });
 
-    // Parse stringa formattata o numero in intero
     function parseNumber(val) {
         if (typeof val === 'number') return Math.round(val);
         if (!val) return 0;
-        // Rimuove punti delle migliaia e converte virgole in punti se presenti decimali
-        let clean = val.toString().replace(/\./g, '').replace(',', '.');
+        let clean = val.toString().trim();
+        if (clean.includes('.') && clean.includes(',')) {
+            if (clean.lastIndexOf(',') > clean.lastIndexOf('.')) {
+                clean = clean.replace(/\./g, '').replace(',', '.');
+            } else {
+                clean = clean.replace(/,/g, '');
+            }
+        } else if (clean.includes(',')) {
+            clean = clean.replace(',', '.');
+        } else if (clean.includes('.')) {
+            const parts = clean.split('.');
+            if (parts.length > 2 || (parts.length === 2 && parts[1].length === 3)) {
+                clean = clean.replace(/\./g, '');
+            }
+        }
         return Math.round(parseFloat(clean)) || 0;
     }
 
-    // Formatta un numero con segno per il confronto (es. +35.500 o -104.000)
     function formatDiff(val) {
         if (val === 0) return '0';
         let formatted = formatter.format(Math.abs(val));
         return val > 0 ? `+${formatted}` : `-${formatted}`;
     }
 
-    // Inizializza l'applicazione all'avvio
     function init() {
-        // Data odierna in formato GG.MM.AAAA
         const now = new Date();
         const dateStr = now.toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' });
-        document.getElementById('current-date').innerText = `fatturato ${dateStr}`;
+        document.getElementById('current-date').innerText = `Fatturato del ${dateStr}`;
 
-        // Carica dati da localStorage o usa i default
-        const saved = localStorage.getItem('tecno_fatturato_data');
+        const saved = localStorage.getItem('tecno_fatturato_data_v3');
         if (saved) {
             branchesData = JSON.parse(saved);
+            const italiaIdx = branchesData.findIndex(b => b.id === 'ITALIA');
+            if (italiaIdx > 0) {
+                const italia = branchesData.splice(italiaIdx, 1)[0];
+                branchesData.unshift(italia);
+            }
         } else {
             branchesData = JSON.parse(JSON.stringify(defaultBranches));
         }
@@ -345,8 +413,7 @@ HTML
         renderTable();
     }
 
-    // Disegna la tabella
-    function renderTable() {
+    function renderTable(preserveFocusId = null, cursorPosition = null) {
         const tbody = document.getElementById('table-body');
         tbody.innerHTML = '';
 
@@ -361,37 +428,88 @@ HTML
             const isItalia = branch.id === 'ITALIA';
 
             const tr = document.createElement('tr');
+            if (isItalia) tr.className = 'row-italia';
+
             tr.innerHTML = `
                 <td class="branch-name">${branch.name}</td>
                 <td>
                     <input type="text" 
+                        id="input-oggi-${index}"
                         class="cell-input ${!isItalia ? 'editable-today' : ''}" 
                         value="${formatter.format(branch.oggi)}"
                         ${isItalia ? 'readonly title="Calcolato automaticamente dal Brogliaccio"' : ''}
-                        onchange="updateOggi(${index}, this.value)"
+                        oninput="handleInputOggi(${index}, this.value, 'input-oggi-${index}')"
                         onfocus="this.select()">
                 </td>
                 <td>
                     <input type="text" 
+                        id="input-tot-${index}"
                         class="cell-input" 
                         value="${formatter.format(totaleAttuale)}"
-                        title="Clicca per modificare il Totale Precedente manualmente se necessario"
-                        onchange="updateTotalePrec(${index}, this.value)">
+                        title="Modifica manualmente il Totale se necessario"
+                        oninput="handleInputTotale(${index}, this.value, 'input-tot-${index}')"
+                        onfocus="this.select()">
                 </td>
-                <td class="${diffClass}">
+                <td>
+                    <input type="text" 
+                        id="input-anno-${index}"
+                        class="cell-input editable-year" 
+                        value="${formatter.format(branch.annoScorso)}"
+                        title="Modifica il target dell'anno scorso per vedere il confronto aggiornato"
+                        oninput="handleInputAnnoScorso(${index}, this.value, 'input-anno-${index}')"
+                        onfocus="this.select()">
+                </td>
+                <td class="${diffClass}" id="cell-diff-${index}">
                     ${formatDiff(diff)}
-                </td>
-                <td style="display:none;">
-                    <!-- Campo nascosto per gestire il target dell'anno scorso in caso di tarature -->
-                    <input type="text" value="${branch.annoScorso}" onchange="updateAnnoScorso(${index}, this.value)">
                 </td>
             `;
             tbody.appendChild(tr);
         });
+
+        if (preserveFocusId) {
+            const el = document.getElementById(preserveFocusId);
+            if (el) {
+                el.focus();
+                try {
+                    const len = el.value.length;
+                    el.setSelectionRange(len, len);
+                } catch(e) {}
+            }
+        }
     }
 
-    // Calcolo automatico Italia: Totale Brogliaccio - Sum(Estero)
+    function handleInputOggi(index, valStr, inputId) {
+        branchesData[index].oggi = parseNumber(valStr);
+        calcolaItaliaSilenzioso();
+        saveData();
+        aggiornaCalcoliDOM();
+    }
+
+    function handleInputTotale(index, valStr, inputId) {
+        const nuovoTotale = parseNumber(valStr);
+        branchesData[index].totalePrec = Math.max(0, nuovoTotale - branchesData[index].oggi);
+        saveData();
+        aggiornaCalcoliDOM();
+    }
+
+    function handleInputAnnoScorso(index, valStr, inputId) {
+        branchesData[index].annoScorso = parseNumber(valStr);
+        saveData();
+        aggiornaCalcoliDOM();
+    }
+
     function calcolaItalia() {
+        calcolaItaliaSilenzioso();
+        saveData();
+        aggiornaCalcoliDOM();
+        const italiaIdx = branchesData.findIndex(b => b.id === 'ITALIA');
+        if (italiaIdx !== -1) {
+            const el = document.getElementById(`input-oggi-${italiaIdx}`);
+            if (el) el.value = formatter.format(branchesData[italiaIdx].oggi);
+        }
+    }
+
+    function calcolaItaliaSilenzioso() {
         const totBrogliaccioStr = document.getElementById('totale-brogliaccio').value;
         const totBrogliaccio = parseNumber(totBrogliaccioStr);
 
@@ -406,42 +524,39 @@ HTML
         if (italiaIndex !== -1 && totBrogliaccio > 0) {
             branchesData[italiaIndex].oggi = Math.max(0, totBrogliaccio - sommaEstero);
         }
-
-        saveData();
-        renderTable();
     }
 
-    // Aggiorna il valore di Oggi per una filiale (es. inserisci Turchia = 82.716)
-    function updateOggi(index, valStr) {
-        branchesData[index].oggi = parseNumber(valStr);
-        // Se modifichiamo un estero, ricalcoliamo l'Italia in automatico
-        calcolaItalia();
-        saveData();
-        renderTable();
+    function aggiornaCalcoliDOM() {
+        branchesData.forEach((branch, index) => {
+            const totaleAttuale = branch.totalePrec + branch.oggi;
+            const diff = totaleAttuale - branch.annoScorso;
+
+            const inputTot = document.getElementById(`input-tot-${index}`);
+            if (inputTot && document.activeElement !== inputTot) {
+                inputTot.value = formatter.format(totaleAttuale);
+            }
+
+            if (branch.id === 'ITALIA') {
+                const inputOggi = document.getElementById(`input-oggi-${index}`);
+                if (inputOggi && document.activeElement !== inputOggi) {
+                    inputOggi.value = formatter.format(branch.oggi);
+                }
+            }
+
+            const cellDiff = document.getElementById(`cell-diff-${index}`);
+            if (cellDiff) {
+                cellDiff.innerText = formatDiff(diff);
+                cellDiff.className = diff > 0 ? 'val-positive' : (diff < 0 ? 'val-negative' : 'val-zero');
+            }
+        });
     }
 
-    // Modifica manuale del totale precedente (per rettifiche eccezionali)
-    function updateTotalePrec(index, valStr) {
-        const nuovoTotale = parseNumber(valStr);
-        branchesData[index].totalePrec = nuovoTotale - branchesData[index].oggi;
-        saveData();
-        renderTable();
-    }
-
-    function updateAnnoScorso(index, valStr) {
-        branchesData[index].annoScorso = parseNumber(valStr);
-        saveData();
-        renderTable();
-    }
-
-    // Salva nello storage del browser
     function saveData() {
-        localStorage.setItem('tecno_fatturato_data', JSON.stringify(branchesData));
+        localStorage.setItem('tecno_fatturato_data_v3', JSON.stringify(branchesData));
     }
 
-    // Chiude la giornata: somma Oggi al Totale Precedente e azzera Oggi per domani
     function chiudiGiornata() {
-        if (!confirm("Sei sicuro di voler chiudere la giornata? I totali attuali diventeranno la base di partenza per domani e la colonna 'Oggi' verrà azzerata.")) {
+        if (!confirm("Confermi la chiusura della giornata? I dati odierni verranno sommati allo storico e la colonna 'Oggi' sarà azzerata per domani.")) {
             return;
         }
 
@@ -453,10 +568,9 @@ HTML
         document.getElementById('totale-brogliaccio').value = '';
         saveData();
         renderTable();
-        alert("Giornata salvata con successo! I totali sono aggiornati per domani.");
+        alert("✅ Giornata chiusa e salvata con successo! I totali sono pronti per domani.");
     }
 
-    // Azzera solo la colonna Oggi senza toccare lo storico
     function resetOggi() {
         if (!confirm("Azzerare i valori odierni?")) return;
         branchesData.forEach(b => b.oggi = 0);
@@ -465,50 +579,81 @@ HTML
         renderTable();
     }
 
-    // Genera una tabella HTML pulita da copiare negli appunti per Outlook/Gmail
     function copiaPerEmail() {
         const container = document.getElementById('email-table-container');
         
-        let html = `
-            <table border="1" cellpadding="8" cellspacing="0" style="border-collapse: collapse; font-family: Arial, sans-serif; font-size: 14px; text-align: center; border: 1px solid #000000;">
-                <thead>
-                    <tr style="background-color: #f2f2f2; font-weight: bold;">
-                        <th style="background-color: #ff0000; color: #ffffff; border: 1px solid #000000; padding: 8px 12px;">FATTURATO</th>
-                        <th style="border: 1px solid #000000; padding: 8px 12px;">OGGI</th>
-                        <th style="border: 1px solid #000000; padding: 8px 12px;">TOTALE</th>
-                        <th style="border: 1px solid #000000; padding: 8px 12px;">CONFRONTO ANNO SCORSO</th>
-                    </tr>
-                </thead>
-                <tbody>
-        `;
+        let totOggiAzienda = 0;
+        let totGenAzienda = 0;
+        let totAnnoScorsoAzienda = 0;
 
         branchesData.forEach(b => {
+            totOggiAzienda += b.oggi;
+            totGenAzienda += (b.totalePrec + b.oggi);
+            totAnnoScorsoAzienda += b.annoScorso;
+        });
+
+        const diffAzienda = totGenAzienda - totAnnoScorsoAzienda;
+        const diffAziendaStr = formatDiff(diffAzienda);
+        const diffAziendaColor = diffAzienda >= 0 ? '#16a34a' : '#dc2626';
+
+        let html = `
+            <div style="font-family: 'Segoe UI', Arial, sans-serif; color: #1f2937; max-width: 800px;">
+                <table border="0" cellpadding="0" cellspacing="0" width="100%" style="border-collapse: collapse; border: 2px solid #334155; font-size: 14px; background-color: #ffffff;">
+                    <thead>
+                        <tr>
+                            <th style="background-color: #dc2626; color: #ffffff; font-weight: bold; text-align: left; padding: 12px 14px; border: 1px solid #334155; width: 24%; font-size: 14px;">FATTURATO</th>
+                            <th style="background-color: #f8fafc; color: #1e293b; font-weight: bold; text-align: right; padding: 12px 14px; border: 1px solid #94a3b8; width: 18%; font-size: 13px;">OGGI</th>
+                            <th style="background-color: #f8fafc; color: #1e293b; font-weight: bold; text-align: right; padding: 12px 14px; border: 1px solid #94a3b8; width: 20%; font-size: 13px;">TOTALE</th>
+                            <th style="background-color: #f8fafc; color: #1e293b; font-weight: bold; text-align: right; padding: 12px 14px; border: 1px solid #94a3b8; width: 18%; font-size: 13px;">ANNO SCORSO</th>
+                            <th style="background-color: #f8fafc; color: #1e293b; font-weight: bold; text-align: right; padding: 12px 14px; border: 1px solid #94a3b8; width: 20%; font-size: 13px;">CONFRONTO</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+        `;
+
+        branchesData.forEach((b, index) => {
             const totaleAttuale = b.totalePrec + b.oggi;
             const diff = totaleAttuale - b.annoScorso;
             const diffStr = formatDiff(diff);
 
-            let diffColor = '#000000';
-            if (diff > 0) diffColor = '#008000'; // Verde email
-            if (diff < 0) diffColor = '#ff0000'; // Rosso email
+            let diffColor = '#64748b';
+            if (diff > 0) diffColor = '#16a34a';
+            if (diff < 0) diffColor = '#dc2626';
+
+            const isItalia = b.id === 'ITALIA';
+            const bgName = isItalia ? '#dcfce7' : (index % 2 === 0 ? '#f8fafc' : '#ffffff');
+            const bgRow = isItalia ? '#f0fdf4' : '#ffffff';
+            const fontName = isItalia ? 'bold 15px' : 'bold 14px';
+            const textColorName = isItalia ? '#14532d' : '#334155';
+            const borderBottom = isItalia ? '2px solid #334155' : '1px solid #cbd5e1';
 
             html += `
-                <tr>
-                    <td style="background-color: #e8f5e9; font-weight: bold; border: 1px solid #000000; text-align: left; padding: 8px 12px;">${b.name}</td>
-                    <td style="border: 1px solid #000000; padding: 8px 12px;">${formatter.format(b.oggi)}</td>
-                    <td style="border: 1px solid #000000; font-weight: bold; padding: 8px 12px;">${formatter.format(totaleAttuale)}</td>
-                    <td style="border: 1px solid #000000; font-weight: bold; color: ${diffColor}; padding: 8px 12px;">${diffStr}</td>
+                <tr style="background-color: ${bgRow};">
+                    <td style="background-color: ${bgName}; color: ${textColorName}; font: ${fontName} 'Segoe UI', Arial, sans-serif; border: 1px solid #94a3b8; border-bottom: ${borderBottom}; padding: 10px 14px; text-align: left;">${b.name}</td>
+                    <td style="border: 1px solid #94a3b8; border-bottom: ${borderBottom}; padding: 10px 14px; text-align: right; font-variant-numeric: tabular-nums; color: #1f2937;">${formatter.format(b.oggi)}</td>
+                    <td style="border: 1px solid #94a3b8; border-bottom: ${borderBottom}; padding: 10px 14px; text-align: right; font-weight: bold; font-size: 15px; font-variant-numeric: tabular-nums; color: #0f172a;">${formatter.format(totaleAttuale)}</td>
+                    <td style="border: 1px solid #94a3b8; border-bottom: ${borderBottom}; padding: 10px 14px; text-align: right; font-variant-numeric: tabular-nums; color: #475569;">${formatter.format(b.annoScorso)}</td>
+                    <td style="border: 1px solid #94a3b8; border-bottom: ${borderBottom}; padding: 10px 14px; text-align: right; font-weight: bold; font-size: 14px; font-variant-numeric: tabular-nums; color: ${diffColor};">${diffStr}</td>
                 </tr>
             `;
         });
 
         html += `
+                    <tr style="background-color: #f1f5f9; font-weight: bold;">
+                        <td style="background-color: #e2e8f0; color: #0f172a; font-weight: 800; font-size: 14px; border: 2px solid #334155; padding: 12px 14px; text-align: left; text-transform: uppercase;">TOTALE GRUPPO</td>
+                        <td style="border: 2px solid #334155; padding: 12px 14px; text-align: right; font-weight: bold; font-size: 14px; color: #0f172a;">${formatter.format(totOggiAzienda)}</td>
+                        <td style="border: 2px solid #334155; padding: 12px 14px; text-align: right; font-weight: 800; font-size: 16px; color: #1e3a8a;">${formatter.format(totGenAzienda)}</td>
+                        <td style="border: 2px solid #334155; padding: 12px 14px; text-align: right; font-weight: bold; font-size: 14px; color: #475569;">${formatter.format(totAnnoScorsoAzienda)}</td>
+                        <td style="border: 2px solid #334155; padding: 12px 14px; text-align: right; font-weight: 800; font-size: 15px; color: ${diffAziendaColor};">${diffAziendaStr}</td>
+                    </tr>
                 </tbody>
             </table>
+            <div style="margin-top: 8px; font-size: 11px; color: #64748b; text-align: right; font-style: italic;">* Valori espressi in Euro (€) al netto delle imposte</div>
+        </div>
         `;
 
         container.innerHTML = html;
 
-        // Selezione e copia negli appunti
         const range = document.createRange();
         range.selectNode(container);
         window.getSelection().removeAllRanges();
@@ -516,15 +661,14 @@ HTML
 
         try {
             document.execCommand('copy');
-            alert("Tabella copiata con successo! Ora puoi fare 'Incolla' (Ctrl+V) direttamente nel corpo della tua email.");
+            alert("📋 Tabella Executive copiata negli appunti!\n\nPronta per essere incollata su Outlook o Gmail.");
         } catch (err) {
-            alert("Errore nella copia. Seleziona la tabella manualmente e premi Ctrl+C.");
+            alert("Errore nella copia automatica. Seleziona manualmente.");
         }
 
         window.getSelection().removeAllRanges();
     }
 
-    // Avvio
     window.onload = init;
 </script>
 </body>
