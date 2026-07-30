@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Magazzino - Saldi Articolo</title>
+    <!-- Carichiamo SheetJS per leggere i file Excel direttamente nel browser -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        :root {
+            --primary-color: #2563eb;
+            --bg-color: #f8fafc;
+            --border-color: #e2e8f0;
+            --danger-color: #ef4444;
+        }
+        body {
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            background-color: var(--bg-color);
+            margin: 0;
+            padding: 20px;
+            color: #334155;
+        }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+        }
+        h1 {
+            font-size: 1.5rem;
+            margin-top: 0;
+            color: #0f172a;
+        }
+        .controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin-bottom: 20px;
+            background: #f1f5f9;
+            padding: 15px;
+            border-radius: 8px;
+        }
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            flex: 1;
+            min-width: 200px;
+        }
+        .input-group label {
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+        input, button {
+            padding: 8px 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 5px;
+            font-size: 1rem;
+        }
+        input:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 2px rgba(37,99,235,0.2);
+        }
+        button {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-weight: 600;
+            transition: background-color 0.2s;
+        }
+        button:hover {
+            background-color: #1d4ed8;
+        }
+        .file-upload {
+            margin-bottom: 20px;
+            padding: 20px;
+            border: 2px dashed var(--border-color);
+            border-radius: 8px;
+            text-align: center;
+        }
+        /* Gestione Tabella con Header Fisso */
+        .table-container {
+            max-height: 600px;
+            overflow-y: auto;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+        }
+        thead th {
+            position: sticky;
+            top: 0;
+            background-color: #f8fafc;
+            padding: 12px;
+            font-weight: 600;
+            border-bottom: 2px solid var(--border-color);
+            z-index: 10;
+        }
+        tbody td {
+            padding: 10px 12px;
+            border-bottom: 1px solid var(--border-color);
+        }
+        tbody tr:hover {
+            background-color: #f1f5f9;
+        }
+        .negative {
+            color: var(--danger-color);
+            font-weight: bold;
+        }
+        .stats {
+            margin-top: 10px;
+            font-size: 0.9rem;
+            color: #64748b;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>📦 Dashboard Ricerca Intelligente Magazzino</h1>
+    
+    <div class="file-upload">
+        <label for="excelFile"><strong>1. Carica il file "Saldi articolo.xlsx"</strong></label><br><br>
+        <input type="file" id="excelFile" accept=".xlsx, .xls">
+    </div>
+
+    <div class="controls">
+        <div class="input-group">
+            <label for="globalSearch">Ricerca Libera (Codice, Descrizione, Misure...)</label>
+            <input type="text" id="globalSearch" placeholder="Es. bisello, 130x25x25...">
+        </div>
+        <div class="input-group" style="min-width: 120px; flex: 0.5;">
+            <label for="esistenzaSearch">Esistenza Esatta</label>
+            <input type="number" id="esistenzaSearch" placeholder="Es. 24">
+        </div>
+        <div class="input-group" style="justify-content: flex-end; flex: 0.5;">
+            <button id="btnSottoScorta">🚨 Mostra Sotto Scorta (< 0)</button>
+        </div>
+        <div class="input-group" style="justify-content: flex-end; flex: 0.5;">
+            <button id="btnReset" style="background-color: #64748b;">Reset Filtri</button>
+        </div>
+    </div>
+
+    <div class="stats" id="recordCount">Articoli visualizzati: 0</div>
+
+    <div class="table-container">
+        <table id="dataTable">
+            <thead>
+                <tr>
+                    <th>Codice articolo</th>
+                    <th>Descrizione</th>
+                    <th>Esistenza</th>
+                    <th>Impegnato</th>
+                    <th>Riservato</th>
+                    <th>Disponibilità</th>
+                    <th>Ordinato</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- I dati verranno inseriti qui -->
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+    let rawData = [];
+    let filterSottoScorta = false;
+
+    // 1. Lettura del file Excel
+    document.getElementById('excelFile').addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const data = new Uint8Array(e.target.result);
+            const workbook = XLSX.read(data, {type: 'array'});
+            
+            // Prendiamo il primo foglio di lavoro
+            const firstSheetName = workbook.SheetNames[0];
+            const worksheet = workbook.Sheets[firstSheetName];
+            
+            // Convertiamo in JSON
+            rawData = XLSX.utils.sheet_to_json(worksheet, {defval: ""});
+            renderTable(rawData);
+        };
+        reader.readAsArrayBuffer(file);
+    });
+
+    // 2. Logica di filtraggio combinato
+    function applyFilters() {
+        const globalTerm = document.getElementById('globalSearch').value.toLowerCase();
+        const esistenzaTerm = document.getElementById('esistenzaSearch').value;
+
+        const filteredData = rawData.filter(row => {
+            // Estrazione sicura dei dati
+            const codice = (row['Codice articolo'] || '').toString().toLowerCase();
+            const descrizione = (row['Descrizione'] || '').toString().toLowerCase();
+            const esistenza = (row['Esistenza'] !== "" ? row['Esistenza'] : "").toString();
+            const disponibilita = parseFloat(row['Disponibilità']) || 0;
+
+            // Condizione 1: Ricerca Globale (Fuzzy search su codice o descrizione)
+            const matchGlobal = codice.includes(globalTerm) || descrizione.includes(globalTerm);
+
+            // Condizione 2: Ricerca per Esistenza Esatta
+            const matchEsistenza = esistenzaTerm === "" || esistenza === esistenzaTerm;
+
+            // Condizione 3: Filtro Rapido Sotto Scorta
+            const matchScorta = !filterSottoScorta || disponibilita < 0;
+
+            // Tutte le condizioni attive devono essere vere
+            return matchGlobal && matchEsistenza && matchScorta;
+        });
+
+        renderTable(filteredData);
+    }
+
+    // 3. Renderizzazione della Tabella
+    function renderTable(data) {
+        const tbody = document.querySelector('#dataTable tbody');
+        tbody.innerHTML = ''; // Svuota la tabella
+
+        data.forEach(row => {
+            const tr = document.createElement('tr');
+            
+            // Verifica disponibilità negativa per applicare stile rosso
+            const dispValue = parseFloat(row['Disponibilità']) || 0;
+            const dispClass = dispValue < 0 ? 'negative' : '';
+
+            tr.innerHTML = `
+                <td>${row['Codice articolo'] || ''}</td>
+                <td>${row['Descrizione'] || ''}</td>
+                <td>${row['Esistenza'] !== "" ? row['Esistenza'] : 0}</td>
+                <td>${row['Impegnato'] !== "" ? row['Impegnato'] : 0}</td>
+                <td>${row['Riservato'] !== "" ? row['Riservato'] : 0}</td>
+                <td class="${dispClass}">${row['Disponibilità'] !== "" ? row['Disponibilità'] : 0}</td>
+                <td>${row['Ordinato'] !== "" ? row['Ordinato'] : 0}</td>
+            `;
+            tbody.appendChild(tr);
+        });
+
+        document.getElementById('recordCount').innerText = `Articoli visualizzati: ${data.length}`;
+    }
+
+    // 4. Listeners degli Eventi (Aggiornamento in tempo reale)
+    document.getElementById('globalSearch').addEventListener('input', applyFilters);
+    document.getElementById('esistenzaSearch').addEventListener('input', applyFilters);
+
+    document.getElementById('btnSottoScorta').addEventListener('click', function() {
+        filterSottoScorta = !filterSottoScorta;
+        this.style.backgroundColor = filterSottoScorta ? '#ef4444' : '#2563eb';
+        this.innerText = filterSottoScorta ? '✅ Sotto Scorta Attivo' : '🚨 Mostra Sotto Scorta (< 0)';
+        applyFilters();
+    });
+
+    document.getElementById('btnReset').addEventListener('click', function() {
+        document.getElementById('globalSearch').value = '';
+        document.getElementById('esistenzaSearch').value = '';
+        filterSottoScorta = false;
+        
+        const btnScorta = document.getElementById('btnSottoScorta');
+        btnScorta.style.backgroundColor = '#2563eb';
+        btnScorta.innerText = '🚨 Mostra Sotto Scorta (< 0)';
+        
+        applyFilters();
+    });
+</script>
+
+</body>
+</html>
