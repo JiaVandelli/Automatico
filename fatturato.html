@@ -150,13 +150,19 @@
         }
 
         .netto-summary {
-            text-align: right;
+            text-align: center;
             background: #ffffff;
             padding: 0.75rem 1.35rem;
             border-radius: 10px;
             border: 2px solid #bfdbfe;
-            min-width: 200px;
+            min-width: 220px;
             box-shadow: 0 2px 4px rgba(37, 99, 235, 0.06);
+            transition: all 0.2s;
+        }
+
+        .netto-summary.error-state {
+            background: #fef2f2;
+            border-color: #f87171;
         }
 
         .netto-summary span {
@@ -168,11 +174,20 @@
             letter-spacing: 0.05em;
         }
 
+        .netto-summary.error-state span {
+            color: #dc2626;
+        }
+
         .netto-summary strong {
             font-size: 1.4rem;
             font-weight: 900;
             color: #1e3a8a;
             font-variant-numeric: tabular-nums;
+        }
+
+        .netto-summary.error-state strong {
+            color: #be123c;
+            font-size: 1.1rem;
         }
 
         /* TABELLA E COLORI */
@@ -195,10 +210,10 @@
             padding: 0.8rem 1rem;
             font-size: 0.98rem;
             background-color: #ffffff;
-            text-align: center; /* Numeri centrati */
+            text-align: center;
         }
 
-        /* Barre Titolo */
+        /* Barra Titolo */
         tr.banner-title th {
             background-color: var(--header-banner);
             color: #ffffff;
@@ -310,7 +325,7 @@
             width: 100%;
             border: 1px solid transparent;
             background: transparent;
-            text-align: center; /* Numeri input centrati */
+            text-align: center;
             font-size: 1.02rem;
             font-weight: 700;
             padding: 0.35rem 0.5rem;
@@ -363,14 +378,14 @@
 
         .actions-left {
             display: flex;
-            gap: 1rem;
+            gap: 0.75rem;
             align-items: center;
             flex-wrap: wrap;
         }
 
         .actions-right {
             display: flex;
-            gap: 1rem;
+            gap: 0.75rem;
             align-items: center;
             flex-wrap: wrap;
         }
@@ -425,7 +440,7 @@
         }
 
         button.action-btn {
-            padding: 0.8rem 1.4rem;
+            padding: 0.8rem 1.35rem;
             font-size: 0.95rem;
             font-weight: 700;
             border: none;
@@ -448,6 +463,8 @@
         .btn-success:hover { background-color: #15803d; }
         .btn-secondary { background-color: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; }
         .btn-secondary:hover { background-color: #e2e8f0; color: #1e293b; }
+        .btn-undo { background-color: #fff7ed; color: #c2410c; border: 1px solid #fdba74; }
+        .btn-undo:hover { background-color: #ffedd5; }
 
         /* TOAST */
         .toast {
@@ -496,15 +513,21 @@
         <div class="input-row">
             <div class="control-group">
                 <label for="totale-brogliaccio">Totale Netto Brogliaccio (€)</label>
-                <input type="text" id="totale-brogliaccio" placeholder="Es. 109.771" oninput="calcolaItalia()">
+                <input type="text" id="totale-brogliaccio" placeholder="Es. 109.771" 
+                    oninput="calcolaItalia()" 
+                    onblur="formattaCampoTop(this)"
+                    onfocus="this.select()">
             </div>
             <div class="control-group">
                 <label for="totale-altro" style="color: #475569;">Da Sottrarre / Altro (€)</label>
-                <input type="text" id="totale-altro" placeholder="Es. 5.000" oninput="calcolaItalia()">
+                <input type="text" id="totale-altro" placeholder="Es. 5.000" 
+                    oninput="calcolaItalia()" 
+                    onblur="formattaCampoTop(this)"
+                    onfocus="this.select()">
             </div>
         </div>
-        <div class="netto-summary">
-            <span>Netto Giornaliero Gruppo</span>
+        <div class="netto-summary" id="netto-box">
+            <span id="netto-label">Netto Giornaliero Gruppo</span>
             <strong id="live-netto-giornaliero">0 €</strong>
         </div>
     </div>
@@ -553,6 +576,9 @@
                 <span class="flag-indicator" id="flag-check"></span>
                 <span>Con 1 giorno in meno</span>
             </button>
+            <button type="button" id="btn-undo" class="action-btn btn-undo" style="display: none;" onclick="annullaUltimaChiusura()" title="Ripristina i dati prima dell'ultima chiusura giornata">
+                ↩️ Annulla Chiusura
+            </button>
         </div>
         <div class="actions-right">
             <button class="action-btn btn-secondary" onclick="resetOggi()">🔄 Azzera "Oggi"</button>
@@ -568,6 +594,7 @@
 <script>
     const STORAGE_KEY = 'tecno_fatturato_data_v4';
     const EXTRA_STATE_KEY = 'tecno_fatturato_extra_v4';
+    const BACKUP_KEY = 'tecno_fatturato_backup_v4';
 
     const defaultBranches = [
         { id: 'ITALIA', name: 'ITALIA', oggi: 0, totalePrec: 1265315, annoScorso: 1256869 },
@@ -585,31 +612,65 @@
         maximumFractionDigits: 0
     });
 
+    // Fix Bug 1: In formato italiano con 0 decimali, il punto (.) è SEMPRE separatore delle migliaia
     function parseNumber(val) {
         if (typeof val === 'number') return Math.round(val);
         if (!val) return 0;
         let clean = val.toString().trim();
-        if (clean.includes('.') && clean.includes(',')) {
-            if (clean.lastIndexOf(',') > clean.lastIndexOf('.')) {
-                clean = clean.replace(/\./g, '').replace(',', '.');
-            } else {
-                clean = clean.replace(/,/g, '');
-            }
-        } else if (clean.includes(',')) {
-            clean = clean.replace(',', '.');
-        } else if (clean.includes('.')) {
-            const parts = clean.split('.');
-            if (parts.length > 2 || (parts.length === 2 && parts[1].length === 3)) {
-                clean = clean.replace(/\./g, '');
-            }
-        }
-        return Math.round(parseFloat(clean)) || 0;
+        // Rimuove tutti i punti delle migliaia e gli spazi, gestisce eventuale virgola decimale
+        clean = clean.replace(/\./g, '').replace(/\s+/g, '').replace(',', '.');
+        const num = parseFloat(clean);
+        return isNaN(num) ? 0 : Math.max(0, Math.round(num));
     }
 
     function formatDiff(val) {
         if (val === 0) return '0';
         let formatted = formatter.format(Math.abs(val));
         return val > 0 ? `+${formatted}` : `-${formatted}`;
+    }
+
+    function formattaCampoTop(inputEl) {
+        const raw = inputEl.value.trim();
+        if (!raw) return;
+        const val = parseNumber(raw);
+        inputEl.value = val > 0 ? formatter.format(val) : '';
+        saveData();
+    }
+
+    function formattaCellaBlur(inputEl, index, tipo) {
+        if (tipo === 'oggi') {
+            inputEl.value = formatter.format(branchesData[index].oggi);
+        } else if (tipo === 'tot') {
+            const totAttuale = branchesData[index].totalePrec + branchesData[index].oggi;
+            inputEl.value = formatter.format(totAttuale);
+        } else if (tipo === 'anno') {
+            inputEl.value = formatter.format(branchesData[index].annoScorso);
+        }
+    }
+
+    // Navigazione rapida con Invio e Frecce Su/Giù come in Excel
+    function gestisciTastiCella(event, index, colPrefix) {
+        if (event.key === 'Enter' || event.key === 'ArrowDown') {
+            event.preventDefault();
+            let nextIdx = index + 1;
+            if (nextIdx < branchesData.length) {
+                const nextEl = document.getElementById(`input-${colPrefix}-${nextIdx}`);
+                if (nextEl && !nextEl.readOnly) {
+                    nextEl.focus();
+                    nextEl.select();
+                }
+            }
+        } else if (event.key === 'ArrowUp') {
+            event.preventDefault();
+            let prevIdx = index - 1;
+            if (prevIdx >= 0) {
+                const prevEl = document.getElementById(`input-${colPrefix}-${prevIdx}`);
+                if (prevEl && !prevEl.readOnly) {
+                    prevEl.focus();
+                    prevEl.select();
+                }
+            }
+        }
     }
 
     function getFormattedDate() {
@@ -621,11 +682,18 @@
         return `${dd}/${mm}/${yyyy}`;
     }
 
+    // Fix Bug 3: Calcolo data in ora locale pura (evita sfasamenti UTC / Ora Legale)
     function getFormattedDateAnnoScorsoMenoUno() {
         const dateInput = document.getElementById('report-date').value;
-        let d = dateInput ? new Date(dateInput) : new Date();
+        let d;
+        if (dateInput) {
+            const [yyyy, mm, dd] = dateInput.split('-').map(Number);
+            d = new Date(yyyy, mm - 1, dd);
+        } else {
+            d = new Date();
+        }
         d.setFullYear(d.getFullYear() - 1);
-        d.setDate(d.getDate() - 1); // un giorno in meno rispetto all'anno scorso
+        d.setDate(d.getDate() - 1);
         const dd = String(d.getDate()).padStart(2, '0');
         const mm = String(d.getMonth() + 1).padStart(2, '0');
         const yyyy = d.getFullYear();
@@ -668,6 +736,14 @@
         }
     }
 
+    function verificaBackupDisponibile() {
+        const backup = localStorage.getItem(BACKUP_KEY);
+        const btnUndo = document.getElementById('btn-undo');
+        if (btnUndo) {
+            btnUndo.style.display = backup ? 'inline-flex' : 'none';
+        }
+    }
+
     function init() {
         const now = new Date();
         const yyyy = now.getFullYear();
@@ -706,6 +782,7 @@
         }
 
         applicaStatoGiornoInMeno();
+        verificaBackupDisponibile();
         renderTable();
     }
 
@@ -735,6 +812,8 @@
                         value="${formatter.format(branch.oggi)}"
                         ${isItalia ? 'readonly title="Calcolato in automatico dal Brogliaccio"' : ''}
                         oninput="handleInputOggi(${index}, this.value)"
+                        onblur="formattaCellaBlur(this, ${index}, 'oggi')"
+                        onkeydown="gestisciTastiCella(event, ${index}, 'oggi')"
                         onfocus="this.select()">
                 </td>
                 <td>
@@ -744,6 +823,8 @@
                         value="${formatter.format(totaleAttuale)}"
                         title="Modifica manualmente il Totale se necessario"
                         oninput="handleInputTotale(${index}, this.value)"
+                        onblur="formattaCellaBlur(this, ${index}, 'tot')"
+                        onkeydown="gestisciTastiCella(event, ${index}, 'tot')"
                         onfocus="this.select()">
                 </td>
                 <td>
@@ -753,6 +834,8 @@
                         value="${formatter.format(branch.annoScorso)}"
                         title="Modifica il valore dell'anno scorso"
                         oninput="handleInputAnnoScorso(${index}, this.value)"
+                        onblur="formattaCellaBlur(this, ${index}, 'anno')"
+                        onkeydown="gestisciTastiCella(event, ${index}, 'anno')"
                         onfocus="this.select()">
                 </td>
                 <td class="${diffClass}" id="cell-diff-${index}">
@@ -862,11 +945,13 @@
         let totOggi = 0;
         let totAttuale = 0;
         let totAnno = 0;
+        let sommaEstero = 0;
 
         branchesData.forEach(b => {
             totOggi += b.oggi;
             totAttuale += (b.totalePrec + b.oggi);
             totAnno += b.annoScorso;
+            if (b.id !== 'ITALIA') sommaEstero += b.oggi;
         });
 
         const diffGruppo = totAttuale - totAnno;
@@ -879,7 +964,23 @@
         elDiff.innerText = formatDiff(diffGruppo);
         elDiff.className = diffGruppo > 0 ? 'val-positive' : (diffGruppo < 0 ? 'val-negative' : 'val-zero');
 
-        document.getElementById('live-netto-giornaliero').innerText = `${formatter.format(totOggi)} €`;
+        // Controllo anti-errore di battitura (se Estero + Altro supera il Brogliaccio inserito)
+        const totBrogliaccioStr = document.getElementById('totale-brogliaccio').value.trim();
+        const totBrogliaccio = parseNumber(totBrogliaccioStr);
+        const altro = parseNumber(document.getElementById('totale-altro').value);
+        const nettoBox = document.getElementById('netto-box');
+        const nettoLabel = document.getElementById('netto-label');
+        const nettoVal = document.getElementById('live-netto-giornaliero');
+
+        if (totBrogliaccioStr !== '' && (sommaEstero + altro) > totBrogliaccio) {
+            nettoBox.classList.add('error-state');
+            nettoLabel.innerText = '⚠️ Attenzione: Superato Brogliaccio';
+            nettoVal.innerText = `Sforato di ${formatter.format((sommaEstero + altro) - totBrogliaccio)} €`;
+        } else {
+            nettoBox.classList.remove('error-state');
+            nettoLabel.innerText = 'Netto Giornaliero Gruppo';
+            nettoVal.innerText = `${formatter.format(totOggi)} €`;
+        }
     }
 
     function saveData() {
@@ -897,6 +998,15 @@
             return;
         }
 
+        // Salva backup di sicurezza prima di chiudere la giornata
+        const backupPayload = {
+            branchesData: JSON.parse(JSON.stringify(branchesData)),
+            brogliaccio: document.getElementById('totale-brogliaccio').value,
+            altro: document.getElementById('totale-altro').value,
+            isGiornoInMeno: isGiornoInMeno
+        };
+        localStorage.setItem(BACKUP_KEY, JSON.stringify(backupPayload));
+
         branchesData.forEach(b => {
             b.totalePrec += b.oggi;
             b.oggi = 0;
@@ -908,8 +1018,35 @@
         applicaStatoGiornoInMeno();
 
         saveData();
+        verificaBackupDisponibile();
         renderTable();
-        mostraToast("✅ Giornata chiusa e salvata con successo!");
+        mostraToast("✅ Giornata chiusa! (Puoi annullare col tasto 'Annulla Chiusura' se serve)");
+    }
+
+    function annullaUltimaChiusura() {
+        const rawBackup = localStorage.getItem(BACKUP_KEY);
+        if (!rawBackup) return;
+
+        if (!confirm("Vuoi ripristinare i dati esattamente a prima dell'ultima chiusura giornata?")) {
+            return;
+        }
+
+        try {
+            const backup = JSON.parse(rawBackup);
+            branchesData = backup.branchesData;
+            document.getElementById('totale-brogliaccio').value = backup.brogliaccio || '';
+            document.getElementById('totale-altro').value = backup.altro || '';
+            isGiornoInMeno = !!backup.isGiornoInMeno;
+
+            localStorage.removeItem(BACKUP_KEY);
+            applicaStatoGiornoInMeno();
+            saveData();
+            verificaBackupDisponibile();
+            renderTable();
+            mostraToast("↩️ Chiusura annullata! I dati precedenti sono stati ripristinati.");
+        } catch (e) {
+            alert("Errore nel ripristino del backup.");
+        }
     }
 
     function resetOggi() {
@@ -927,7 +1064,7 @@
         toast.classList.add('show');
         setTimeout(() => {
             toast.classList.remove('show');
-        }, 3200);
+        }, 3500);
     }
 
     function copiaPerEmail() {
@@ -959,12 +1096,13 @@
         ` : '';
 
         const badgeHeaderHtml = isGiornoInMeno
-            ? `&nbsp;&nbsp;<span style="background-color: #fef3c7; color: #b45309; padding: 3px 8px; border-radius: 4px; font-size: 11px; font-weight: bold;">CON 1 GIORNO IN MENO</span>`
+            ? `&nbsp;&nbsp;<span style="background-color: #fef3c7; color: #b45309; font-size: 11px; font-weight: bold;">&nbsp;[CON 1 GIORNO IN MENO]&nbsp;</span>`
             : '';
 
+        // Fix Bug 2: width="760" fisso sulla tabella per evitare che Outlook per PC la allarghi su tutto il monitor
         let html = `
-            <div style="font-family: 'Segoe UI', Arial, sans-serif; color: #0f172a; max-width: 820px; background-color: #ffffff;">
-                <table border="0" cellpadding="0" cellspacing="0" width="100%" style="border-collapse: collapse; border: 2px solid #1e3a8a; font-size: 14px; background-color: #ffffff;">
+            <div style="font-family: 'Segoe UI', Arial, sans-serif; color: #0f172a; background-color: #ffffff;">
+                <table border="0" cellpadding="0" cellspacing="0" width="760" style="width: 760px; max-width: 100%; border-collapse: collapse; border: 2px solid #1e3a8a; font-size: 14px; background-color: #ffffff;">
                     <tbody>
                         <tr bgcolor="#2563eb" style="background-color: #2563eb;">
                             <td colspan="5" bgcolor="#2563eb" style="background-color: #2563eb; color: #ffffff; font-family: 'Segoe UI', Arial, sans-serif; font-weight: bold; text-align: left; padding: 12px 16px; border: 1px solid #1d4ed8; font-size: 14px; letter-spacing: 0.6px; text-transform: uppercase;">
@@ -973,19 +1111,19 @@
                         </tr>
                         ${warningRowHtml}
                         <tr>
-                            <td bgcolor="#e11d48" style="background-color: #e11d48; color: #ffffff; font-family: 'Segoe UI', Arial, sans-serif; font-weight: bold; text-align: left; padding: 12px 14px; border: 1px solid #be123c; width: 22%; font-size: 14px; text-transform: uppercase;">
+                            <td width="22%" bgcolor="#e11d48" style="background-color: #e11d48; color: #ffffff; font-family: 'Segoe UI', Arial, sans-serif; font-weight: bold; text-align: left; padding: 12px 14px; border: 1px solid #be123c; width: 22%; font-size: 14px; text-transform: uppercase;">
                                 <span style="color: #ffffff;">FATTURATO</span>
                             </td>
-                            <td bgcolor="#16a34a" style="background-color: #16a34a; color: #ffffff; font-family: 'Segoe UI', Arial, sans-serif; font-weight: bold; text-align: center; padding: 12px 14px; border: 1px solid #15803d; width: 18%; font-size: 13px; text-transform: uppercase;">
+                            <td width="18%" bgcolor="#16a34a" style="background-color: #16a34a; color: #ffffff; font-family: 'Segoe UI', Arial, sans-serif; font-weight: bold; text-align: center; padding: 12px 14px; border: 1px solid #15803d; width: 18%; font-size: 13px; text-transform: uppercase;">
                                 <span style="color: #ffffff;">OGGI</span>
                             </td>
-                            <td bgcolor="#16a34a" style="background-color: #16a34a; color: #ffffff; font-family: 'Segoe UI', Arial, sans-serif; font-weight: bold; text-align: center; padding: 12px 14px; border: 1px solid #15803d; width: 20%; font-size: 13px; text-transform: uppercase;">
+                            <td width="20%" bgcolor="#16a34a" style="background-color: #16a34a; color: #ffffff; font-family: 'Segoe UI', Arial, sans-serif; font-weight: bold; text-align: center; padding: 12px 14px; border: 1px solid #15803d; width: 20%; font-size: 13px; text-transform: uppercase;">
                                 <span style="color: #ffffff;">TOTALE</span>
                             </td>
-                            <td bgcolor="#16a34a" style="background-color: #16a34a; color: #ffffff; font-family: 'Segoe UI', Arial, sans-serif; font-weight: bold; text-align: center; padding: 12px 14px; border: 1px solid #15803d; width: 18%; font-size: 13px; text-transform: uppercase;">
+                            <td width="20%" bgcolor="#16a34a" style="background-color: #16a34a; color: #ffffff; font-family: 'Segoe UI', Arial, sans-serif; font-weight: bold; text-align: center; padding: 12px 14px; border: 1px solid #15803d; width: 20%; font-size: 13px; text-transform: uppercase;">
                                 <span style="color: #ffffff;">ANNO SCORSO</span>
                             </td>
-                            <td bgcolor="#16a34a" style="background-color: #16a34a; color: #ffffff; font-family: 'Segoe UI', Arial, sans-serif; font-weight: bold; text-align: center; padding: 12px 14px; border: 1px solid #15803d; width: 22%; font-size: 13px; text-transform: uppercase;">
+                            <td width="20%" bgcolor="#16a34a" style="background-color: #16a34a; color: #ffffff; font-family: 'Segoe UI', Arial, sans-serif; font-weight: bold; text-align: center; padding: 12px 14px; border: 1px solid #15803d; width: 20%; font-size: 13px; text-transform: uppercase;">
                                 <span style="color: #ffffff;">CONFRONTO</span>
                             </td>
                         </tr>
@@ -1050,7 +1188,7 @@
                         </tr>
                     </tbody>
                 </table>
-                <div style="margin-top: 8px; font-size: 11px; color: #64748b; text-align: right; font-style: italic;">
+                <div style="margin-top: 8px; width: 760px; max-width: 100%; font-size: 11px; color: #64748b; text-align: left; font-style: italic;">
                     * Valori espressi in Euro (€) al netto delle imposte &mdash; Dati aggiornati al ${dataReport}${isGiornoInMeno ? ` (Confronto anno scorso riferito al ${dataAnnoScorsoMeno})` : ''}
                 </div>
             </div>
