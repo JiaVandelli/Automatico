@@ -478,7 +478,16 @@
             return new Date().toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' });
         }
         const [yyyy, mm, dd] = dateInput.split('-');
-        return `${dd}/${mm}/${yyyy}`; }  function init() { // Imposta la data di oggi nel selettore const now = new Date(); const yyyy = now.getFullYear(); const mm = String(now.getMonth() + 1).padStart(2, '0'); const dd = String(now.getDate()).padStart(2, '0'); document.getElementById('report-date').value = `${yyyy}-${mm}-${dd}`;
+        return `${dd}/${mm}/${yyyy}`;
+    }
+
+    function init() {
+        // Imposta la data di oggi nel selettore
+        const now = new Date();
+        const yyyy = now.getFullYear();
+        const mm = String(now.getMonth() + 1).padStart(2, '0');
+        const dd = String(now.getDate()).padStart(2, '0');
+        document.getElementById('report-date').value = `${yyyy}-${mm}-${dd}`;
 
         const saved = localStorage.getItem(STORAGE_KEY);
         if (saved) {
@@ -549,4 +558,271 @@
                         value="${formatter.format(branch.annoScorso)}"
                         title="Modifica il valore dell'anno scorso"
                         oninput="handleInputAnnoScorso(${index}, this.value)"
-                        onfocus="this.
+                        onfocus="this.select()">
+                </td>
+                <td class="${diffClass}" id="cell-diff-${index}">
+                    ${formatDiff(diff)}
+                </td>
+            `;
+            tbody.appendChild(tr);
+        });
+
+        aggiornaTotaliGruppoDOM();
+
+        if (preserveFocusId) {
+            const el = document.getElementById(preserveFocusId);
+            if (el) {
+                el.focus();
+                try {
+                    const len = el.value.length;
+                    el.setSelectionRange(len, len);
+                } catch(e) {}
+            }
+        }
+    }
+
+    function handleInputOggi(index, valStr) {
+        branchesData[index].oggi = parseNumber(valStr);
+        calcolaItaliaSilenzioso();
+        saveData();
+        aggiornaCalcoliDOM();
+    }
+
+    function handleInputTotale(index, valStr) {
+        const nuovoTotale = parseNumber(valStr);
+        branchesData[index].totalePrec = Math.max(0, nuovoTotale - branchesData[index].oggi);
+        saveData();
+        aggiornaCalcoliDOM();
+    }
+
+    function handleInputAnnoScorso(index, valStr) {
+        branchesData[index].annoScorso = parseNumber(valStr);
+        saveData();
+        aggiornaCalcoliDOM();
+    }
+
+    function calcolaItalia() {
+        calcolaItaliaSilenzioso();
+        saveData();
+        aggiornaCalcoliDOM();
+        const italiaIdx = branchesData.findIndex(b => b.id === 'ITALIA');
+        if (italiaIdx !== -1) {
+            const el = document.getElementById(`input-oggi-${italiaIdx}`);
+            if (el) el.value = formatter.format(branchesData[italiaIdx].oggi);
+        }
+    }
+
+    function calcolaItaliaSilenzioso() {
+        const totBrogliaccioStr = document.getElementById('totale-brogliaccio').value;
+        const totBrogliaccio = parseNumber(totBrogliaccioStr);
+
+        const altroStr = document.getElementById('totale-altro').value;
+        const altro = parseNumber(altroStr);
+
+        let sommaEstero = 0;
+        branchesData.forEach(b => {
+            if (b.id !== 'ITALIA') {
+                sommaEstero += b.oggi;
+            }
+        });
+
+        const italiaIndex = branchesData.findIndex(b => b.id === 'ITALIA');
+        if (italiaIndex !== -1) {
+            if (totBrogliaccioStr.trim() === '') {
+                branchesData[italiaIndex].oggi = 0;
+            } else {
+                branchesData[italiaIndex].oggi = Math.max(0, totBrogliaccio - altro - sommaEstero);
+            }
+        }
+    }
+
+    function aggiornaCalcoliDOM() {
+        branchesData.forEach((branch, index) => {
+            const totaleAttuale = branch.totalePrec + branch.oggi;
+            const diff = totaleAttuale - branch.annoScorso;
+
+            const inputTot = document.getElementById(`input-tot-${index}`);
+            if (inputTot && document.activeElement !== inputTot) {
+                inputTot.value = formatter.format(totaleAttuale);
+            }
+
+            if (branch.id === 'ITALIA') {
+                const inputOggi = document.getElementById(`input-oggi-${index}`);
+                if (inputOggi && document.activeElement !== inputOggi) {
+                    inputOggi.value = formatter.format(branch.oggi);
+                }
+            }
+
+            const cellDiff = document.getElementById(`cell-diff-${index}`);
+            if (cellDiff) {
+                cellDiff.innerText = formatDiff(diff);
+                cellDiff.className = diff > 0 ? 'val-positive' : (diff < 0 ? 'val-negative' : 'val-zero');
+            }
+        });
+
+        aggiornaTotaliGruppoDOM();
+    }
+
+    function aggiornaTotaliGruppoDOM() {
+        let totOggi = 0;
+        let totAttuale = 0;
+        let totAnno = 0;
+
+        branchesData.forEach(b => {
+            totOggi += b.oggi;
+            totAttuale += (b.totalePrec + b.oggi);
+            totAnno += b.annoScorso;
+        });
+
+        const diffGruppo = totAttuale - totAnno;
+
+        document.getElementById('tot-gruppo-oggi').innerText = formatter.format(totOggi);
+        document.getElementById('tot-gruppo-attuale').innerText = formatter.format(totAttuale);
+        document.getElementById('tot-gruppo-anno').innerText = formatter.format(totAnno);
+
+        const elDiff = document.getElementById('tot-gruppo-diff');
+        elDiff.innerText = formatDiff(diffGruppo);
+        elDiff.className = diffGruppo > 0 ? 'val-positive' : (diffGruppo < 0 ? 'val-negative' : 'val-zero');
+
+        document.getElementById('live-netto-giornaliero').innerText = `${formatter.format(totOggi)} €`;
+    }
+
+    function saveData() {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(branchesData));
+    }
+
+    function chiudiGiornata() {
+        if (!confirm("Confermi la chiusura della giornata?\nI dati odierni verranno sommati allo storico e la colonna 'Oggi' sarà azzerata per domani.")) {
+            return;
+        }
+
+        branchesData.forEach(b => {
+            b.totalePrec += b.oggi;
+            b.oggi = 0;
+        });
+
+        document.getElementById('totale-brogliaccio').value = '';
+        document.getElementById('totale-altro').value = '';
+
+        saveData();
+        renderTable();
+        mostraToast("✅ Giornata chiusa e salvata con successo!");
+    }
+
+    function resetOggi() {
+        if (!confirm("Azzerare i valori odierni?")) return;
+        branchesData.forEach(b => b.oggi = 0);
+        document.getElementById('totale-brogliaccio').value = '';
+        document.getElementById('totale-altro').value = '';
+        saveData();
+        renderTable();
+    }
+
+    function mostraToast(messaggio) {
+        const toast = document.getElementById('toast');
+        toast.innerText = messaggio;
+        toast.classList.add('show');
+        setTimeout(() => {
+            toast.classList.remove('show');
+        }, 3200);
+    }
+
+    function copiaPerEmail() {
+        const container = document.getElementById('email-table-container');
+        const dataReport = getFormattedDate();
+
+        let totOggiAzienda = 0;
+        let totGenAzienda = 0;
+        let totAnnoScorsoAzienda = 0;
+
+        branchesData.forEach(b => {
+            totOggiAzienda += b.oggi;
+            totGenAzienda += (b.totalePrec + b.oggi);
+            totAnnoScorsoAzienda += b.annoScorso;
+        });
+
+        const diffAzienda = totGenAzienda - totAnnoScorsoAzienda;
+        const diffAziendaStr = formatDiff(diffAzienda);
+        const diffAziendaColor = diffAzienda >= 0 ? '#16a34a' : '#dc2626';
+
+        let html = `
+            <div style="font-family: 'Segoe UI', Arial, sans-serif; color: #1f2937; max-width: 800px;">
+                <table border="0" cellpadding="0" cellspacing="0" width="100%" style="border-collapse: collapse; border: 2px solid #334155; font-size: 14px; background-color: #ffffff;">
+                    <thead>
+                        <tr>
+                            <th colspan="5" style="background-color: #0f172a; color: #ffffff; font-weight: bold; text-align: left; padding: 10px 14px; border: 1px solid #0f172a; font-size: 13px; letter-spacing: 0.8px; text-transform: uppercase;">
+                                REPORT FATTURATO GIORNALIERO &mdash; ${dataReport}
+                            </th>
+                        </tr>
+                        <tr>
+                            <th style="background-color: #dc2626; color: #ffffff; font-weight: bold; text-align: left; padding: 12px 14px; border: 1px solid #b91c1c; width: 24%; font-size: 14px;">FATTURATO</th>
+                            <th style="background-color: #16a34a; color: #ffffff; font-weight: bold; text-align: right; padding: 12px 14px; border: 1px solid #15803d; width: 18%; font-size: 13px;">OGGI</th>
+                            <th style="background-color: #16a34a; color: #ffffff; font-weight: bold; text-align: right; padding: 12px 14px; border: 1px solid #15803d; width: 20%; font-size: 13px;">TOTALE</th>
+                            <th style="background-color: #16a34a; color: #ffffff; font-weight: bold; text-align: right; padding: 12px 14px; border: 1px solid #15803d; width: 18%; font-size: 13px;">ANNO SCORSO</th>
+                            <th style="background-color: #16a34a; color: #ffffff; font-weight: bold; text-align: right; padding: 12px 14px; border: 1px solid #15803d; width: 20%; font-size: 13px;">CONFRONTO</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+        `;
+
+        branchesData.forEach(b => {
+            const totaleAttuale = b.totalePrec + b.oggi;
+            const diff = totaleAttuale - b.annoScorso;
+            const diffStr = formatDiff(diff);
+
+            let diffColor = '#64748b';
+            if (diff > 0) diffColor = '#16a34a';
+            if (diff < 0) diffColor = '#dc2626';
+
+            const bgName = '#1e3a8a'; 
+
+            html += `
+                <tr style="background-color: #ffffff;">
+                    <td style="background-color: ${bgName}; color: #ffffff; font: bold 14px 'Segoe UI', Arial, sans-serif; border: 1px solid #1e40af; border-bottom: 1px solid #1e40af; padding: 10px 14px; text-align: left; letter-spacing: 0.5px;">${b.name}</td>
+                    <td style="background-color: #ffffff; border: 1px solid #94a3b8; border-bottom: 1px solid #cbd5e1; padding: 10px 14px; text-align: right; font-variant-numeric: tabular-nums; color: #1f2937;">${formatter.format(b.oggi)}</td>
+                    <td style="background-color: #ffffff; border: 1px solid #94a3b8; border-bottom: 1px solid #cbd5e1; padding: 10px 14px; text-align: right; font-weight: bold; font-size: 15px; font-variant-numeric: tabular-nums; color: #0f172a;">${formatter.format(totaleAttuale)}</td>
+                    <td style="background-color: #ffffff; border: 1px solid #94a3b8; border-bottom: 1px solid #cbd5e1; padding: 10px 14px; text-align: right; font-variant-numeric: tabular-nums; color: #475569;">${formatter.format(b.annoScorso)}</td>
+                    <td style="background-color: #ffffff; border: 1px solid #94a3b8; border-bottom: 1px solid #cbd5e1; padding: 10px 14px; text-align: right; font-weight: bold; font-size: 14px; font-variant-numeric: tabular-nums; color: ${diffColor};">${diffStr}</td>
+                </tr>
+            `;
+        });
+
+        html += `
+                    <tr style="background-color: #f1f5f9; font-weight: bold;">
+                        <td style="background-color: #e2e8f0; color: #0f172a; font-weight: 800; font-size: 14px; border: 2px solid #334155; padding: 12px 14px; text-align: left; text-transform: uppercase;">TOTALE GRUPPO</td>
+                        <td style="background-color: #f1f5f9; border: 2px solid #334155; padding: 12px 14px; text-align: right; font-weight: bold; font-size: 14px; color: #0f172a;">${formatter.format(totOggiAzienda)}</td>
+                        <td style="background-color: #f1f5f9; border: 2px solid #334155; padding: 12px 14px; text-align: right; font-weight: 800; font-size: 16px; color: #1e3a8a;">${formatter.format(totGenAzienda)}</td>
+                        <td style="background-color: #f1f5f9; border: 2px solid #334155; padding: 12px 14px; text-align: right; font-weight: bold; font-size: 14px; color: #475569;">${formatter.format(totAnnoScorsoAzienda)}</td>
+                        <td style="background-color: #f1f5f9; border: 2px solid #334155; padding: 12px 14px; text-align: right; font-weight: 800; font-size: 15px; color: ${diffAziendaColor};">${diffAziendaStr}</td>
+                    </tr>
+                </tbody>
+            </table>
+            <div style="margin-top: 8px; font-size: 11px; color: #64748b; text-align: right; font-style: italic;">* Valori espressi in Euro (€) al netto delle imposte &mdash; Dati aggiornati al ${dataReport}</div>
+        </div>
+        `;
+
+        container.innerHTML = html;
+
+        const range = document.createRange();
+        range.selectNode(container);
+        window.getSelection().removeAllRanges();
+        window.getSelection().addRange(range);
+
+        try {
+            document.execCommand('copy');
+            const btn = document.getElementById('btn-copy');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '✅ Copiata negli appunti!';
+            setTimeout(() => { btn.innerHTML = originalText; }, 2500);
+            mostraToast(`📋 Tabella del ${dataReport} copiata! Pronta da incollare su Outlook o Gmail.`);
+        } catch (err) {
+            alert("Errore nella copia automatica. Seleziona manualmente.");
+        }
+
+        window.getSelection().removeAllRanges();
+    }
+
+    window.onload = init;
+</script>
+</body>
+</html>
