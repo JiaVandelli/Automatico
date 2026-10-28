@@ -1,0 +1,852 @@
+```html
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestione Mensa Aziendale 🍽️</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Font Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'sans-serif'] },
+                }
+            }
+        }
+    </script>
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(226, 232, 240, 0.8);
+        }
+        .dark .glass-card {
+            background: rgba(30, 41, 59, 0.9);
+            border: 1px solid rgba(51, 65, 85, 0.8);
+        }
+        /* Custom scrollbar */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 9999px; }
+        .dark ::-webkit-scrollbar-thumb { background: #475569; }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-slate-50 via-indigo-50/30 to-purple-50/40 dark:from-slate-950 dark:via-slate-900 dark:to-indigo-950/40 min-h-screen text-slate-800 dark:text-slate-100 transition-colors duration-300">
+
+    <!-- Top Navigation Header -->
+    <header class="sticky top-0 z-40 backdrop-blur-md bg-white/80 dark:bg-slate-900/85 border-b border-slate-200/80 dark:border-slate-800 px-4 lg:px-8 py-4 shadow-sm">
+        <div class="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div class="flex items-center space-x-3">
+                <div class="w-11 h-11 rounded-2xl bg-gradient-to-tr from-indigo-600 via-purple-600 to-pink-500 flex items-center justify-center text-white shadow-lg shadow-indigo-500/30">
+                    <i class="fa-solid fa-utensils text-xl"></i>
+                </div>
+                <div>
+                    <h1 class="text-xl font-bold bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 bg-clip-text text-transparent">Mensa Manager Pro</h1>
+                    <p class="text-xs text-slate-500 dark:text-slate-400">Controllo Consumazioni, Debiti e Buste Paga</p>
+                </div>
+            </div>
+
+            <div class="flex flex-wrap items-center gap-2.5">
+                <button onclick="openPriceListModal()" class="px-3.5 py-2 text-xs font-semibold bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-900/60 rounded-xl transition-all flex items-center gap-2 border border-indigo-200/60 dark:border-indigo-800/60 shadow-sm">
+                    <i class="fa-solid fa-receipt text-sm"></i> Listino Prezzi
+                </button>
+                <button onclick="openAddEmployeeModal()" class="px-4 py-2 text-xs font-semibold bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white rounded-xl shadow-md shadow-indigo-500/20 transition-all flex items-center gap-2">
+                    <i class="fa-solid fa-user-plus text-sm"></i> Nuovo Dipendente
+                </button>
+                <button onclick="exportData()" class="p-2 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-all" title="Esporta Dati JSON">
+                    <i class="fa-solid fa-download text-sm"></i>
+                </button>
+                <label class="p-2 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-all cursor-pointer" title="Importa Dati JSON">
+                    <i class="fa-solid fa-upload text-sm"></i>
+                    <input type="file" id="importFile" accept=".json" onchange="importData(event)" class="hidden">
+                </label>
+                <button onclick="toggleDarkMode()" class="p-2 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-all" title="Cambia Tema">
+                    <i id="themeIcon" class="fa-solid fa-moon text-sm"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <main class="max-w-7xl mx-auto px-4 lg:px-8 py-8 space-y-8">
+
+        <!-- KPI Summary Cards -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+            <!-- Totale Debiti -->
+            <div class="glass-card p-5 rounded-2xl shadow-sm relative overflow-hidden group hover:shadow-md transition-all">
+                <div class="absolute right-4 top-4 w-10 h-10 rounded-xl bg-rose-50 dark:bg-rose-950/50 text-rose-600 dark:text-rose-400 flex items-center justify-center text-lg">
+                    <i class="fa-solid fa-wallet"></i>
+                </div>
+                <p class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Debito Totale Dipendenti</p>
+                <h3 id="kpiTotalDebt" class="text-2xl font-extrabold text-rose-600 dark:text-rose-400 mt-2">0,00 €</h3>
+                <p class="text-xs text-slate-400 mt-1 flex items-center gap-1">Da incassare o trattenere</p>
+            </div>
+
+            <!-- Totale Trattenute Busta Paga -->
+            <div class="glass-card p-5 rounded-2xl shadow-sm relative overflow-hidden group hover:shadow-md transition-all">
+                <div class="absolute right-4 top-4 w-10 h-10 rounded-xl bg-amber-50 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400 flex items-center justify-center text-lg">
+                    <i class="fa-solid fa-file-invoice-dollar"></i>
+                </div>
+                <p class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Totale in Busta Paga</p>
+                <h3 id="kpiTotalPayroll" class="text-2xl font-extrabold text-amber-600 dark:text-amber-400 mt-2">0,00 €</h3>
+                <p class="text-xs text-slate-400 mt-1 flex items-center gap-1">Verifica contabile mensile</p>
+            </div>
+
+            <!-- Incassi del Mese -->
+            <div class="glass-card p-5 rounded-2xl shadow-sm relative overflow-hidden group hover:shadow-md transition-all">
+                <div class="absolute right-4 top-4 w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 flex items-center justify-center text-lg">
+                    <i class="fa-solid fa-hand-holding-dollar"></i>
+                </div>
+                <p class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Incassato Totale</p>
+                <h3 id="kpiTotalCollected" class="text-2xl font-extrabold text-emerald-600 dark:text-emerald-400 mt-2">0,00 €</h3>
+                <p class="text-xs text-slate-400 mt-1 flex items-center gap-1">Pagamenti registrati</p>
+            </div>
+
+            <!-- Totale Dipendenti -->
+            <div class="glass-card p-5 rounded-2xl shadow-sm relative overflow-hidden group hover:shadow-md transition-all">
+                <div class="absolute right-4 top-4 w-10 h-10 rounded-xl bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400 flex items-center justify-center text-lg">
+                    <i class="fa-solid fa-users"></i>
+                </div>
+                <p class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Colleghi in Lista</p>
+                <h3 id="kpiTotalEmployees" class="text-2xl font-extrabold text-indigo-600 dark:text-indigo-400 mt-2">0</h3>
+                <p class="text-xs text-slate-400 mt-1 flex items-center gap-1">Dipendenti attivi</p>
+            </div>
+        </div>
+
+        <!-- Toolbar & Search -->
+        <div class="flex flex-col sm:flex-row items-center justify-between gap-4 bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm">
+            <div class="relative w-full sm:w-80">
+                <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                    <i class="fa-solid fa-magnifying-glass text-sm"></i>
+                </span>
+                <input type="text" id="searchInput" oninput="renderApp()" placeholder="Cerca collega..." class="w-full pl-10 pr-4 py-2 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:text-white transition-all">
+            </div>
+
+            <div class="flex items-center gap-3 w-full sm:w-auto justify-end">
+                <button onclick="resetMonthData()" class="px-4 py-2 text-xs font-medium text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 dark:hover:bg-rose-900/50 rounded-xl transition-all border border-rose-200 dark:border-rose-900/50 flex items-center gap-2">
+                    <i class="fa-solid fa-rotate-right"></i> Resetta Mese
+                </button>
+            </div>
+        </div>
+
+        <!-- Employees Table Card -->
+        <div class="glass-card rounded-2xl shadow-sm overflow-hidden border border-slate-200/80 dark:border-slate-800">
+            <div class="px-6 py-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between bg-slate-50/50 dark:bg-slate-800/50">
+                <div>
+                    <h2 class="text-base font-bold text-slate-800 dark:text-white flex items-center gap-2">
+                        <i class="fa-solid fa-address-book text-indigo-600">></i> Tabella Contabilità Mensa
+                    </h2>
+                    <p class="text-xs text-slate-500 dark:text-slate-400">Clicca sul nome per modificarlo. I dati vengono salvati automaticamente nel browser.</p>
+                </div>
+            </div>
+
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-slate-100/70 dark:bg-slate-800/80 text-slate-600 dark:text-slate-300 text-xs font-bold uppercase tracking-wider border-b border-slate-200 dark:border-slate-700">
+                            <th class="py-3.5 px-6">Dipendente / Collega</th>
+                            <th class="py-3.5 px-4 text-center">Stato / Saldo</th>
+                            <th class="py-3.5 px-4 text-center">Da Trattenere (Busta Paga)</th>
+                            <th class="py-3.5 px-6 text-center">Azioni Rapide (Ordini)</th>
+                            <th class="py-3.5 px-6 text-center">Gestione Pagamenti</th>
+                            <th class="py-3.5 px-4 text-center">Azioni</th>
+                        </tr>
+                    </thead>
+                    <tbody id="employeesTableBody" class="divide-y divide-slate-200/70 dark:divide-slate-800 text-sm">
+                        <!-- Dynamic Rows injected via JS -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+
+    <!-- Modal: Registra Ordine -->
+    <div id="orderModal" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm hidden flex items-center justify-center p-4">
+        <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-2xl max-w-md w-full p-6 space-y-6 transform transition-all">
+            <div class="flex items-center justify-between">
+                <h3 id="orderModalTitle" class="text-lg font-bold text-slate-800 dark:text-white flex items-center gap-2">
+                    <i class="fa-solid fa-utensils text-indigo-600"></i> Registra Pasto
+                </h3>
+                <button onclick="closeOrderModal()" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-2 rounded-lg">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+
+            <form id="orderForm" onsubmit="saveOrder(event)" class="space-y-4">
+                <input type="hidden" id="orderEmployeeId">
+                
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-2 uppercase tracking-wide">Seleziona Piatto / Menu (Listino Ufficiale)</label>
+                    <select id="mealTypeSelect" onchange="updateMealPricePreview()" class="w-full px-4 py-2.5 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-indigo-500 dark:text-white font-medium">
+                        <option value="primo">Primo (5,00 €)</option>
+                        <option value="primo_contorno">Primo + Contorno (8,00 €)</option>
+                        <option value="secondo">Secondo (5,00 €)</option>
+                        <option value="secondo_contorno">Secondo + Contorno (6,00 €)</option>
+                        <option value="contorno">Contorno (3,00 €)</option>
+                        <option value="pizza">Pizza (Standard 6,00 € / 7,00 €)</option>
+                        <option value="insalatatona">Insalatatona (6,00 € - 8,00 € con 5+ ingr.)</option>
+                        <option value="menu_completo">Primo + Secondo + Contorno (10,00 €)</option>
+                        <option value="custom">Altro importo personalizzato</option>
+                    </select>
+                </div>
+
+                <!-- Extra options for Pizza / Insalatatona / Custom -->
+                <div id="pizzaVariantDiv" class="hidden space-y-2">
+                    <label class="block text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase">Prezzo Pizza</label>
+                    <div class="flex gap-4">
+                        <label class="flex items-center gap-2 cursor-pointer text-sm">
+                            <input type="radio" name="pizzaPrice" value="6" checked class="text-indigo-600"> 6,00 €
+                        </label>
+                        <label class="flex items-center gap-2 cursor-pointer text-sm">
+                            <input type="radio" name="pizzaPrice" value="7" class="text-indigo-600"> 7,00 €
+                        </label>
+                    </div>
+                </div>
+
+                <div id="insalatatonaVariantDiv" class="hidden space-y-2">
+                    <label class="block text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase">Tipo Insalatatona</label>
+                    <div class="flex gap-4">
+                        <label class="flex items-center gap-2 cursor-pointer text-sm">
+                            <input type="radio" name="insalataPrice" value="6" checked class="text-indigo-600"> Standard (6,00 €)
+                        </label>
+                        <label class="flex items-center gap-2 cursor-pointer text-sm">
+                            <input type="radio" name="insalataPrice" value="8" class="text-indigo-600"> 5+ Ingredienti (8,00 €)
+                        </label>
+                    </div>
+                </div>
+
+                <div id="customPriceDiv" class="hidden space-y-2">
+                    <label class="block text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase">Importo personalizzato (€)</label>
+                    <input type="number" step="0.50" id="customPriceInput" value="5.00" class="w-full px-4 py-2 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl dark:text-white">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-2 uppercase tracking-wide">Nota / Giorno (Opzionale)</label>
+                    <input type="text" id="orderNote" placeholder="Es. Pranzo di oggi / Mercoledì" class="w-full px-4 py-2.5 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl dark:text-white">
+                </div>
+
+                <div class="bg-indigo-50/60 dark:bg-indigo-950/40 p-4 rounded-xl border border-indigo-100 dark:border-indigo-900 flex items-center justify-between">
+                    <span class="text-xs font-bold text-indigo-700 dark:text-indigo-300 uppercase">Costo Pasto:</span>
+                    <span id="calculatedPriceDisplay" class="text-lg font-extrabold text-indigo-600 dark:text-indigo-400">5,00 €</span>
+                </div>
+
+                <div class="flex justify-end gap-3 pt-2">
+                    <button type="button" onclick="closeOrderModal()" class="px-4 py-2.5 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-all">Annulla</button>
+                    <button type="submit" class="px-5 py-2.5 text-xs font-semibold bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl shadow-md hover:from-indigo-700 hover:to-purple-700 transition-all">Aggiungi al Conto</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal: Registra Pagamento -->
+    <div id="paymentModal" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm hidden flex items-center justify-center p-4">
+        <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-2xl max-w-sm w-full p-6 space-y-6 transform transition-all">
+            <div class="flex items-center justify-between">
+                <h3 class="text-lg font-bold text-slate-800 dark:text-white flex items-center gap-2">
+                    <i class="fa-solid fa-cash-register text-emerald-600"></i> Registra Pagamento
+                </h3>
+                <button onclick="closePaymentModal()" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-2 rounded-lg">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+
+            <form id="paymentForm" onsubmit="savePayment(event)" class="space-y-4">
+                <input type="hidden" id="paymentEmployeeId">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">Importo Pagato (€)</label>
+                    <input type="number" step="0.50" id="paymentAmountInput" required class="w-full px-4 py-2.5 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl dark:text-white font-bold">
+                    <p id="paymentEmployeeDebtInfo" class="text-xs text-slate-500 mt-1.5"></p>
+                </div>
+                <div class="flex justify-end gap-3 pt-2">
+                    <button type="button" onclick="closePaymentModal()" class="px-4 py-2.5 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl">Annulla</button>
+                    <button type="submit" class="px-5 py-2.5 text-xs font-semibold bg-gradient-to-r from-emerald-600 to-teal-600 text-white rounded-xl shadow-md hover:from-emerald-700 hover:to-teal-700 transition-all">Conferma Pagamento</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal: Listino Prezzi -->
+    <div id="priceListModal" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm hidden flex items-center justify-center p-4">
+        <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-2xl max-w-lg w-full p-6 space-y-6 transform transition-all">
+            <div class="flex items-center justify-between">
+                <h3 class="text-lg font-bold text-slate-800 dark:text-white flex items-center gap-2">
+                    <i class="fa-solid fa-receipt text-indigo-600"></i> Listino Prezzi Mensa Ufficiale
+                </h3>
+                <button onclick="closePriceListModal()" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-2 rounded-lg">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+
+            <div class="space-y-3 text-sm">
+                <div class="flex justify-between items-center p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-800">
+                    <span class="font-medium text-slate-700 dark:text-slate-300">Primo</span>
+                    <span class="font-bold text-indigo-600 dark:text-indigo-400">5,00 € <span class="text-xs text-slate-400 font-normal">(+ Contorno: 8,00 €)</span></span>
+                </div>
+                <div class="flex justify-between items-center p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-800">
+                    <span class="font-medium text-slate-700 dark:text-slate-300">Secondo</span>
+                    <span class="font-bold text-indigo-600 dark:text-indigo-400">5,00 € <span class="text-xs text-slate-400 font-normal">(+ Contorno: 6,00 €)</span></span>
+                </div>
+                <div class="flex justify-between items-center p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-800">
+                    <span class="font-medium text-slate-700 dark:text-slate-300">Contorno</span>
+                    <span class="font-bold text-indigo-600 dark:text-indigo-400">3,00 €</span>
+                </div>
+                <div class="flex justify-between items-center p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-800">
+                    <span class="font-medium text-slate-700 dark:text-slate-300">Pizza</span>
+                    <span class="font-bold text-indigo-600 dark:text-indigo-400">6,00 € / 7,00 €</span>
+                </div>
+                <div class="flex justify-between items-center p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-800">
+                    <span class="font-medium text-slate-700 dark:text-slate-300">Insalatatona</span>
+                    <span class="font-bold text-indigo-600 dark:text-indigo-400">6,00 € <span class="text-xs text-slate-400 font-normal">(8,00 € con 5+ ingr.)</span></span>
+                </div>
+                <div class="flex justify-between items-center p-3 rounded-xl bg-indigo-50/50 dark:bg-indigo-950/40 border border-indigo-100 dark:border-indigo-900">
+                    <span class="font-bold text-indigo-800 dark:text-indigo-300">Menu Completo (Primo + Secondo + Contorno)</span>
+                    <span class="font-extrabold text-indigo-600 dark:text-indigo-400">10,00 €</span>
+                </div>
+            </div>
+
+            <div class="flex justify-end pt-2">
+                <button onclick="closePriceListModal()" class="px-5 py-2.5 text-xs font-semibold bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-xl transition-all">Chiudi</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Storico Ordini Dipendente -->
+    <div id="historyModal" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm hidden flex items-center justify-center p-4">
+        <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-2xl max-w-xl w-full p-6 space-y-6 transform transition-all">
+            <div class="flex items-center justify-between">
+                <h3 id="historyModalTitle" class="text-lg font-bold text-slate-800 dark:text-white flex items-center gap-2">
+                    <i class="fa-solid fa-list-check text-indigo-600"></i> Storico Consumazioni
+                </h3>
+                <button onclick="closeHistoryModal()" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-2 rounded-lg">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+
+            <div class="max-h-64 overflow-y-auto pr-1">
+                <div id="employeeHistoryList" class="space-y-2.5 text-sm">
+                    <!-- Dynamic history items -->
+                </div>
+            </div>
+
+            <div class="flex justify-between items-center pt-2 border-t border-slate-200 dark:border-slate-800">
+                <span class="text-xs text-slate-500" id="historyTotalSpentInfo">Totale pasti registrati: 0,00 €</span>
+                <button onclick="closeHistoryModal()" class="px-5 py-2.5 text-xs font-semibold bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl transition-all">Chiudi</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notification Toast -->
+    <div id="toast" class="fixed bottom-5 right-5 z-50 transform translate-y-20 opacity-0 transition-all duration-300 bg-slate-900 dark:bg-slate-800 text-white px-5 py-3 rounded-2xl shadow-xl flex items-center gap-3 border border-slate-700">
+        <i id="toastIcon" class="fa-solid fa-circle-check text-emerald-400 text-lg"></i>
+        <span id="toastMessage" class="text-sm font-medium">Operazione completata con successo!</span>
+    </div>
+
+    <!-- JavaScript Application Logic -->
+    <script>
+        // Data Structure & Storage Key
+        const STORAGE_KEY = 'mensa_manager_data_v1';
+
+        // Default initial data: 8 empty or placeholder rows as requested ("lascia le celle vuote, metto io i nomi")
+        let appData = {
+            employees: [
+                { id: '1', name: 'Collega 1', orders: [], payments: [] },
+                { id: '2', name: 'Collega 2', orders: [], payments: [] },
+                { id: '3', name: 'Collega 3', orders: [], payments: [] },
+                { id: '4', name: 'Collega 4', orders: [], payments: [] },
+                { id: '5', name: 'Collega 5', orders: [], payments: [] },
+                { id: '6', name: 'Collega 6', orders: [], payments: [] },
+                { id: '7', name: 'Collega 7', orders: [], payments: [] },
+                { id: '8', name: 'Collega 8', orders: [], payments: [] }
+            ]
+        };
+
+        // Load data from localStorage on start
+        function loadData() {
+            const saved = localStorage.getItem(STORAGE_KEY);
+            if (saved) {
+                try {
+                    appData = JSON.parse(saved);
+                } catch (e) {
+                    console.error("Errore nel parsing dei dati salvati", e);
+                }
+            }
+        }
+
+        // Save data to localStorage
+        function saveData() {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(appData));
+            renderApp();
+        }
+
+        // Initialize Theme
+        function initTheme() {
+            if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                document.documentElement.classList.add('dark');
+                document.getElementById('themeIcon').className = 'fa-solid fa-sun text-sm';
+            } else {
+                document.documentElement.classList.remove('dark');
+                document.getElementById('themeIcon').className = 'fa-solid fa-moon text-sm';
+            }
+        }
+
+        function toggleDarkMode() {
+            if (document.documentElement.classList.contains('dark')) {
+                document.documentElement.classList.remove('dark');
+                localStorage.theme = 'light';
+                document.getElementById('themeIcon').className = 'fa-solid fa-moon text-sm';
+            } else {
+                document.documentElement.classList.add('dark');
+                localStorage.theme = 'dark';
+                document.getElementById('themeIcon').className = 'fa-solid fa-sun text-sm';
+            }
+        }
+
+        // Toast Notification helper
+        function showToast(message, type = 'success') {
+            const toast = document.getElementById('toast');
+            const toastMsg = document.getElementById('toastMessage');
+            const toastIcon = document.getElementById('toastIcon');
+
+            toastMsg.textContent = message;
+            if (type === 'success') {
+                toastIcon.className = 'fa-solid fa-circle-check text-emerald-400 text-lg';
+            } else {
+                toastIcon.className = 'fa-solid fa-triangle-exclamation text-amber-400 text-lg';
+            }
+
+            toast.classList.remove('translate-y-20', 'opacity-0');
+            setTimeout(() => {
+                toast.classList.add('translate-y-20', 'opacity-0');
+            }, 3000);
+        }
+
+        // Calculations for each employee
+        function getEmployeeTotals(emp) {
+            const totalOrders = emp.orders.reduce((sum, o) => sum + Number(o.price), 0);
+            const totalPayments = emp.payments.reduce((sum, p) => sum + Number(p.amount), 0);
+            // Saldo = Pagamenti - Ordini (Se pagamenti < ordini, il saldo è negativo ovvero in debito)
+            const balance = totalPayments - totalOrders;
+            // Debito residuo (positivo in valore assoluto se in passivo)
+            const debt = totalOrders - totalPayments;
+            return { totalOrders, totalPayments, balance, debt };
+        }
+
+        // Render main application table and KPIs
+        function renderApp() {
+            const tbody = document.getElementById('employeesTableBody');
+            const searchQuery = document.getElementById('searchInput').value.toLowerCase();
+            tbody.innerHTML = '';
+
+            let grandTotalDebt = 0;
+            let grandTotalCollected = 0;
+            let activeCount = appData.employees.length;
+
+            appData.employees.forEach((emp, index) => {
+                if (searchQuery && !emp.name.toLowerCase().includes(searchQuery)) return;
+
+                const { totalOrders, totalPayments, balance, debt } = getEmployeeTotals(emp);
+
+                // Accumulate totals for KPIs
+                if (debt > 0) grandTotalDebt += debt;
+                grandTotalCollected += totalPayments;
+
+                // Saldo Badge Styling
+                let saldoBadge = '';
+                if (balance < -0.01) {
+                    saldoBadge = `<span class="px-3 py-1 text-xs font-extrabold bg-rose-100 dark:bg-rose-950/70 text-rose-700 dark:text-rose-300 rounded-full border border-rose-200 dark:border-rose-900 inline-flex items-center gap-1.5 shadow-sm">
+                        <i class="fa-solid fa-circle-exclamation text-rose-500"></i> -${Math.abs(balance).toFixed(2)} € (Debito)
+                    </span>`;
+                } else if (balance > 0.01) {
+                    saldoBadge = `<span class="px-3 py-1 text-xs font-extrabold bg-emerald-100 dark:bg-emerald-950/70 text-emerald-700 dark:text-emerald-300 rounded-full border border-emerald-200 dark:border-emerald-900 inline-flex items-center gap-1.5 shadow-sm">
+                        <i class="fa-solid fa-circle-check text-emerald-500"></i> +${balance.toFixed(2)} € (Credito)
+                    </span>`;
+                } else {
+                    saldoBadge = `<span class="px-3 py-1 text-xs font-bold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-full border border-slate-200 dark:border-slate-700 inline-flex items-center gap-1.5">
+                        <i class="fa-solid fa-check text-slate-400"></i> 0,00 € (In pari)
+                    </span>`;
+                }
+
+                // Totale da trattenere in busta paga (uguale al debito non ancora pagato)
+                const payrollDeduction = debt > 0 ? debt : 0;
+
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-slate-50/80 dark:hover:bg-slate-800/50 transition-colors border-b border-slate-100 dark:border-slate-800/80";
+                tr.innerHTML = `
+                    <td class="py-4 px-6 font-medium text-slate-900 dark:text-white">
+                        <div class="flex items-center gap-3">
+                            <span class="w-7 h-7 rounded-xl bg-indigo-50 dark:bg-indigo-950/80 text-indigo-600 dark:text-indigo-400 font-bold text-xs flex items-center justify-center shrink-0 border border-indigo-100 dark:border-indigo-900">${index + 1}</span>
+                            <input type="text" value="${emp.name}" onchange="updateEmployeeName('${emp.id}', this.value)" class="bg-transparent border-b border-transparent hover:border-slate-300 dark:hover:border-slate-600 focus:border-indigo-500 focus:outline-none px-1 py-0.5 font-semibold text-slate-800 dark:text-slate-100 w-full max-w-[200px]" title="Modifica nome">
+                        </div>
+                    </td>
+                    <td class="py-4 px-4 text-center">
+                        ${saldoBadge}
+                    </td>
+                    <td class="py-4 px-4 text-center">
+                        <span class="font-extrabold text-amber-600 dark:text-amber-400 text-sm bg-amber-50 dark:bg-amber-950/40 px-3 py-1 rounded-xl border border-amber-200/60 dark:border-amber-900/40 inline-block">
+                            ${payrollDeduction.toFixed(2)} €
+                        </span>
+                    </td>
+                    <td class="py-4 px-6 text-center">
+                        <div class="flex items-center justify-center gap-2">
+                            <button onclick="openOrderModal('${emp.id}')" class="px-3 py-1.5 text-xs font-semibold bg-indigo-50 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-900 rounded-xl transition-all flex items-center gap-1.5 border border-indigo-200/60 dark:border-indigo-900">
+                                <i class="fa-solid fa-plus text-xs"></i> Aggiungi Pasto
+                            </button>
+                            <button onclick="openHistoryModal('${emp.id}')" class="p-2 text-slate-500 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-all" title="Visualizza Storico">
+                                <i class="fa-solid fa-list-ul text-sm"></i>
+                            </button>
+                        </div>
+                    </td>
+                    <td class="py-4 px-6 text-center">
+                        <button onclick="openPaymentModal('${emp.id}')" class="px-3 py-1.5 text-xs font-semibold bg-emerald-50 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-100 dark:hover:bg-emerald-900 rounded-xl transition-all inline-flex items-center gap-1.5 border border-emerald-200/60 dark:border-emerald-900 shadow-sm">
+                            <i class="fa-solid fa-cash-register text-xs"></i> Registra Pagamento
+                        </button>
+                    </td>
+                    <td class="py-4 px-4 text-center">
+                        <button onclick="deleteEmployee('${emp.id}')" class="p-2 text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/50 rounded-xl transition-all" title="Elimina Dipendente">
+                            <i class="fa-solid fa-trash-can text-sm"></i>
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            // Update KPI numbers
+            document.getElementById('kpiTotalDebt').textContent = `${grandTotalDebt.toFixed(2)} €`;
+            document.getElementById('kpiTotalPayroll').textContent = `${grandTotalDebt.toFixed(2)} €`;
+            document.getElementById('kpiTotalCollected').textContent = `${grandTotalCollected.toFixed(2)} €`;
+            document.getElementById('kpiTotalEmployees').textContent = activeCount;
+        }
+
+        // Add New Employee
+        function openAddEmployeeModal() {
+            const name = prompt("Inserisci il nome del nuovo dipendente / collega:");
+            if (name && name.trim() !== '') {
+                const newEmp = {
+                    id: Date.now().toString(),
+                    name: name.trim(),
+                    orders: [],
+                    payments: []
+                };
+                appData.employees.push(newEmp);
+                saveData();
+                showToast(`Dipendente "${name}" aggiunto con successo!`);
+            }
+        }
+
+        function updateEmployeeName(id, newName) {
+            const emp = appData.employees.find(e => e.id === id);
+            if (emp && newName.trim() !== '') {
+                emp.name = newName.trim();
+                saveData();
+                showToast("Nome aggiornato correttamente!");
+            }
+        }
+
+        function deleteEmployee(id) {
+            if (confirm("Sei sicuro di voler eliminare questo dipendente e tutti i suoi dati associati?")) {
+                appData.employees = appData.employees.filter(e => e.id !== id);
+                saveData();
+                showToast("Dipendente eliminato.", "warning");
+            }
+        }
+
+        // Order Modal Management
+        function openOrderModal(empId) {
+            document.getElementById('orderEmployeeId').value = empId;
+            document.getElementById('mealTypeSelect').value = 'primo';
+            document.getElementById('orderNote').value = '';
+            document.getElementById('customPriceInput').value = '5.00';
+            updateMealPricePreview();
+            document.getElementById('orderModal').classList.remove('hidden');
+        }
+
+        function closeOrderModal() {
+            document.getElementById('orderModal').classList.add('hidden');
+        }
+
+        function updateMealPricePreview() {
+            const type = document.getElementById('mealTypeSelect').value;
+            const pizzaDiv = document.getElementById('pizzaVariantDiv');
+            const insalataDiv = document.getElementById('insalatatonaVariantDiv');
+            const customDiv = document.getElementById('customPriceDiv');
+            const display = document.getElementById('calculatedPriceDisplay');
+
+            pizzaDiv.classList.add('hidden');
+            insalataDiv.classList.add('hidden');
+            customDiv.classList.add('hidden');
+
+            let price = 5.00;
+
+            if (type === 'primo') {
+                price = 5.00;
+            } else if (type === 'primo_contorno') {
+                price = 8.00;
+            } else if (type === 'secondo') {
+                price = 5.00;
+            } else if (type === 'secondo_contorno') {
+                price = 6.00;
+            } else if (type === 'contorno') {
+                price = 3.00;
+            } else if (type === 'pizza') {
+                pizzaDiv.classList.remove('hidden');
+                const selectedPizza = document.querySelector('input[name="pizzaPrice"]:checked');
+                price = selectedPizza ? parseFloat(selectedPizza.value) : 6.00;
+            } else if (type === 'insalatatona') {
+                insalataDiv.classList.remove('hidden');
+                const selectedInsalata = document.querySelector('input[name="insalataPrice"]:checked');
+                price = selectedInsalata ? parseFloat(selectedInsalata.value) : 6.00;
+            } else if (type === 'menu_completo') {
+                price = 10.00;
+            } else if (type === 'custom') {
+                customDiv.classList.remove('hidden');
+                price = parseFloat(document.getElementById('customPriceInput').value) || 0;
+            }
+
+            display.textContent = `${price.toFixed(2)} €`;
+        }
+
+        // Listeners for variant radio buttons & custom input
+        document.addEventListener('change', (e) => {
+            if (e.target.name === 'pizzaPrice' || e.target.name === 'insalataPrice' || e.target.id === 'customPriceInput') {
+                updateMealPricePreview();
+            }
+        });
+
+        function saveOrder(e) {
+            e.preventDefault();
+            const empId = document.getElementById('orderEmployeeId').value;
+            const type = document.getElementById('mealTypeSelect').value;
+            const note = document.getElementById('orderNote').value.trim();
+            
+            let price = 5.00;
+            let description = '';
+
+            if (type === 'primo') {
+                price = 5.00; description = 'Primo';
+            } else if (type === 'primo_contorno') {
+                price = 8.00; description = 'Primo + Contorno';
+            } else if (type === 'secondo') {
+                price = 5.00; description = 'Secondo';
+            } else if (type === 'secondo_contorno') {
+                price = 6.00; description = 'Secondo + Contorno';
+            } else if (type === 'contorno') {
+                price = 3.00; description = 'Contorno';
+            } else if (type === 'pizza') {
+                const val = document.querySelector('input[name="pizzaPrice"]:checked').value;
+                price = parseFloat(val);
+                description = `Pizza (${price.toFixed(2)} €)`;
+            } else if (type === 'insalatatona') {
+                const val = document.querySelector('input[name="insalataPrice"]:checked').value;
+                price = parseFloat(val);
+                description = val == '8' ? 'Insalatatona (5+ ingr.)' : 'Insalatatona Standard';
+            } else if (type === 'menu_completo') {
+                price = 10.00; description = 'Menu Completo (Primo + Secondo + Contorno)';
+            } else if (type === 'custom') {
+                price = parseFloat(document.getElementById('customPriceInput').value) || 0;
+                description = 'Altro pasto personalizzato';
+            }
+
+            if (note) description += ` (${note})`;
+
+            const emp = appData.employees.find(item => item.id === empId);
+            if (emp) {
+                emp.orders.push({
+                    id: Date.now().toString(),
+                    date: new Date().toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' }),
+                    description,
+                    price
+                });
+                saveData();
+                closeOrderModal();
+                showToast(`Pasto registrato con successo (${price.toFixed(2)} €)!`);
+            }
+        }
+
+        // Payment Modal Management
+        function openPaymentModal(empId) {
+            const emp = appData.employees.find(e => e.id === empId);
+            if (!emp) return;
+
+            const { debt } = getEmployeeTotals(emp);
+            document.getElementById('paymentEmployeeId').value = empId;
+            document.getElementById('paymentAmountInput').value = debt > 0 ? debt.toFixed(2) : '5.00';
+            document.getElementById('paymentEmployeeDebtInfo').textContent = `Debito attuale da saldare: ${debt.toFixed(2)} €`;
+            document.getElementById('paymentModal').classList.remove('hidden');
+        }
+
+        function closePaymentModal() {
+            document.getElementById('paymentModal').classList.add('hidden');
+        }
+
+        function savePayment(e) {
+            e.preventDefault();
+            const empId = document.getElementById('paymentEmployeeId').value;
+            const amount = parseFloat(document.getElementById('paymentAmountInput').value);
+
+            if (isNaN(amount) || amount <= 0) {
+                alert("Inserisci un importo valido.");
+                return;
+            }
+
+            const emp = appData.employees.find(item => item.id === empId);
+            if (emp) {
+                emp.payments.push({
+                    id: Date.now().toString(),
+                    date: new Date().toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' }),
+                    amount
+                });
+                saveData();
+                closePaymentModal();
+                showToast(`Pagamento di ${amount.toFixed(2)} € registrato con successo!`);
+            }
+        }
+
+        // History Modal
+        function openHistoryModal(empId) {
+            const emp = appData.employees.find(e => e.id === empId);
+            if (!emp) return;
+
+            document.getElementById('historyModalTitle').innerHTML = `<i class="fa-solid fa-list-check text-indigo-600"></i> Storico: ${emp.name}`;
+            const listContainer = document.getElementById('employeeHistoryList');
+            listContainer.innerHTML = '';
+
+            if (emp.orders.length === 0 && emp.payments.length === 0) {
+                listContainer.innerHTML = `<p class="text-slate-400 text-center py-6">Nessuna consumazione o pagamento registrato.</p>`;
+            } else {
+                // Combine and sort by newest first (approx)
+                let combined = [
+                    ...emp.orders.map(o => ({ ...o, type: 'order' })),
+                    ...emp.payments.map(p => ({ ...p, type: 'payment', description: `Pagamento effettuato`, price: p.amount }))
+                ];
+
+                combined.forEach(item => {
+                    const div = document.createElement('div');
+                    div.className = "flex items-center justify-between p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-800";
+                    
+                    if (item.type === 'order') {
+                        div.innerHTML = `
+                            <div>
+                                <p class="font-semibold text-slate-800 dark:text-white text-xs">${item.description}</p>
+                                <span class="text-[10px] text-slate-400">${item.date}</span>
+                            </div>
+                            <div class="flex items-center gap-3">
+                                <span class="font-extrabold text-rose-600 text-xs">-${item.price.toFixed(2)} €</span>
+                                <button onclick="deleteOrder('${emp.id}', '${item.id}')" class="text-slate-400 hover:text-rose-600 p-1" title="Elimina voce">
+                                    <i class="fa-solid fa-trash-can text-xs"></i>
+                                </button>
+                            </div>
+                        `;
+                    } else {
+                        div.innerHTML = `
+                            <div>
+                                <p class="font-semibold text-emerald-600 dark:text-emerald-400 text-xs"><i class="fa-solid fa-cash-register mr-1"></i> ${item.description}</p>
+                                <span class="text-[10px] text-slate-400">${item.date}</span>
+                            </div>
+                            <div class="flex items-center gap-3">
+                                <span class="font-extrabold text-emerald-600 text-xs">+${item.price.toFixed(2)} €</span>
+                                <button onclick="deletePayment('${emp.id}', '${item.id}')" class="text-slate-400 hover:text-rose-600 p-1" title="Elimina pagamento">
+                                    <i class="fa-solid fa-trash-can text-xs"></i>
+                                </button>
+                            </div>
+                        `;
+                    }
+                    listContainer.appendChild(div);
+                });
+            }
+
+            const { totalOrders } = getEmployeeTotals(emp);
+            document.getElementById('historyTotalSpentInfo').textContent = `Totale pasti accumulati: ${totalOrders.toFixed(2)} €`;
+            document.getElementById('historyModal').classList.remove('hidden');
+        }
+
+        function closeHistoryModal() {
+            document.getElementById('historyModal').classList.add('hidden');
+        }
+
+        function deleteOrder(empId, orderId) {
+            const emp = appData.employees.find(e => e.id === empId);
+            if (emp) {
+                emp.orders = emp.orders.filter(o => o.id !== orderId);
+                saveData();
+                openHistoryModal(empId);
+                showToast("Consumazione rimossa.", "warning");
+            }
+        }
+
+        function deletePayment(empId, paymentId) {
+            const emp = appData.employees.find(e => e.id === empId);
+            if (emp) {
+                emp.payments = emp.payments.filter(p => p.id !== paymentId);
+                saveData();
+                openHistoryModal(empId);
+                showToast("Pagamento rimosso.", "warning");
+            }
+        }
+
+        // Price list modal
+        function openPriceListModal() { document.getElementById('priceListModal').classList.remove('hidden'); }
+        function closePriceListModal() { document.getElementById('priceListModal').classList.add('hidden'); }
+
+        // Reset Month
+        function resetMonthData() {
+            if (confirm("Attenzione: Vuoi azzerare tutti i debiti, ordini e pagamenti per iniziare un nuovo mese?")) {
+                appData.employees.forEach(emp => {
+                    emp.orders = [];
+                    emp.payments = [];
+                });
+                saveData();
+                showToast("Mese azzerato con successo! Pronto per il nuovo ciclo.");
+            }
+        }
+
+        // Export/Import JSON data
+        function exportData() {
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(appData, null, 2));
+            const dlAnchorElem = document.createElement('a');
+            dlAnchorElem.setAttribute("href", dataStr);
+            dlAnchorElem.setAttribute("download", `mensa_data_${new Date().toISOString().slice(0, 10)}.json`);
+            document.body.appendChild(dlAnchorElem);
+            dlAnchorElem.click();
+            dlAnchorElem.remove();
+            showToast("Backup JSON esportato con successo!");
+        }
+
+        function importData(event) {
+            const fileReader = new FileReader();
+            if (event.target.files[0]) {
+                fileReader.readAsText(event.target.files[0], "UTF-8");
+                fileReader.onload = (e) => {
+                    try {
+                        const parsed = JSON.parse(e.target.result);
+                        if (parsed && parsed.employees) {
+                            appData = parsed;
+                            saveData();
+                            showToast("Dati importati con successo!");
+                        } else {
+                            alert("File non valido.");
+                        }
+                    } catch (err) {
+                        alert("Errore durante la lettura del file JSON.");
+                    }
+                };
+            }
+        }
+
+        // Run on load
+        window.onload = () => {
+            initTheme();
+            loadData();
+            renderApp();
+        };
+    </script>
+</body>
+</html>
+```
